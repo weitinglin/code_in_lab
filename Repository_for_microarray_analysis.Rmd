@@ -8,35 +8,267 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(affy)
+library(GEOquery)
+library(hgu133plus2)
+library(annotate)
+library(limma)
+library(affyPLM)
 ```
 
 ## Introduction
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+This is the repository for the code used in microarray analysis.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+```{r }
 
-```{r cars}
-summary(cars)
 ```
 
-## Input Microarray
+## Input Microarray cel. file
+use the affy package to input the data. it's important to give the metadata for the experiment.
 
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r input, echo=FALSE}
+ data.path  <- file.path("/Users/Weitinglin/Documents/2016 實驗室資料處理/201510 microarray/raw data 20100114/set 8 CLS CLF Sphere")
+ experiment.set <- c ( rep ("set8_withfibroblast" , 3 ) , rep ( "set8_withoutfibroblast" , 3 ), rep("set8_sphere", 3) )
+ 
+ #save the phenotype data
+ set<- list.files (data.path, pattern=".CEL")
+ phenodata.set               <- matrix ( rep ( set, 2) , ncol = 2 )
+ phenodata.set      <- as.data.frame ( phenodata.set )
+ colnames ( phenodata.set )   <- c ( "Name" , "FileName" )
+ phenodata.set$experiment.set <- experiment.set
+ write.table(phenodata.set, paste(data.path,"/phenodata_set.txt", sep = ""),quote=F,sep="\t",row.names=F)
+ 
+ # use the ReadAddy to input
+ celfile.set <- ReadAffy ( celfile.path = data.path , phenoData = paste(data.path,"/phenodata_set.txt", sep = "") )
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
 ## Preprocess
 
+the preprocess step clustering can let us make sure the within group clustering analysis, to ensure the expreiement quality and build the overall sense of the data
+```{r clustering analysis}
+##clustering 
+library(latticeExtra)
+dd <- dist2(log2(exprs(Exprs.data)+1))
+#dist2 is the method from the genefilter
+dd <- as.matrix(dist(t(log2(Exprs.data.median+1)), method = "euclidean"))
+#euclidean, maximum, manhattan, canberra, binary, mikowski
+dd <- dist2(log2(exprs(Exprs.data )+1))
+diag(dd) <- 0
+dd.row <- as.dendrogram(hclust(as.dist(dd)))
+row.ord <- order.dendrogram(dd.row)
+legend <- list(top = list(fun= dendrogramGrob, args = list(x = dd.row, side="top")))
+lp <- levelplot(dd[row.ord, row.ord], scales = list(x = list(rot=90)), xlab="", ylab="",legend=legend)
+plot(lp)
+
+```
 
 
-## EDA before the analysis
+There are plenty way to preprocess the microarray data, such as RMA, MAS5...., and the package Affy(expresso), AffyPLM(three step) provide several way to do the preprocess. 
+The overall preprocess method for the affymetrix plateform microarray data include background correction, pm correction, summarization.
+
+
+
+```{r preprocess function}
+#use the MAS method in one step
+Exprs.data <- mas5 ( celfile.set , normalize = FALSE, analysis = "absolute", sc = 500)
+
+#use the expresso to do one step, which have partial flexibility
+Exprs.data <- expresso( celfile.set,
+                        bg.correct = TRUE,
+                        bgcorrect.method = "mas",
+                        normalize = FALSE,
+                        pmcorrect.method =  "subtractmm",
+                        summary.method = "mas")
+#pm correction method : "mas" "methods" "pmonly" "subtractmm"
+#summary.method "avgdiff" "liwong" "mas" "medianpolish" "playerout"
+
+Exprs.data <- computeExprSet(celfile.set, pmcorrect.method = "pmonly", summary.method = "avgdiff" )
+Exprs.data <- generateExprVal.method.avgdiff(exprs(celfile.set))
+
+#combine the background correction, three step to provide more flexibility in microarray preprocession
+Exprs.data <- bg.correct(celfile.set, method = "mas") 
+#Background correction method:
+
+Exprs.data <- threestep(celfile.set, background = FALSE, normalize = FALSE, summary.method = "median.polish")
+#Summarization choice:median.polish tukey.biweight average.log rlm log.average log.median median.log log.2nd.largest lm
+
+
+
+```
+
 
 
 ## Normalization
+the quantile normalization method: first quantile normalization ( choose by median or mean )and then log transformation(log2)
+```{r quantile_normalization function}
+#Quantile Normalization
+quantile_normalization <- function(ecelfile.set, method="mean"){
+  a <- ecelfile.set
+  asort <- apply(a,2,sort)
+  loc<-apply(a,2,order)  #原本probe的位置apply
+  #step 2 :Takes the means of across rows
+  if (method =="mean"){
+  amean1<-matrix(rep(apply(asort,1,mean),dim(a)[2]),nrow=length(apply(asort,1,mean)))
+  }else if(method == "median"){
+    amean1<-matrix(rep(apply(asort,1,median),dim(a)[2]),nrow=length(apply(asort,1,median)))
+  }
+  #step 3 :Rearranging each column to make the same ordering as the original data
+  norm<-matrix(0,dim(a)[1],dim(a)[2])
+  
+  for(i in 1:dim(amean1)[2]){
+    #norm<-matrix(0,dim(amean)[1],1)
+    for (j in 1:dim(amean1)[1]){
+      #cat(loc[j,i],"\t",i,"\t",j,"\t",amean[j,i],"\n")
+      norm[loc[j,i],i]<-amean1[j,i]
+    }
+  }
+  norm <- log2(norm + 1)
+  row.names(norm) <- row.names ( ecelfile.set) 
+  colnames(norm)  <- colnames ( ecelfile.set)
+  return(norm)
+}
+
+```
+
+
+## Prefiltering before the analysis
+According to the paper, which indicate the increase power with the prefilter method
+```{r prefilter method}
+
+prefilter_choose <- function(eSet, method, parameters){
+  if ( method == "filterbyvariance"){
+    # print("I'm in filter")
+    # print(parameters)
+    return(nsFilter(eSet, remove.dupEntrez = FALSE, var.cutoff = parameters[1])$eset)
+  } else if ( method == "filterbyexpressionlevel"){
+    # print(parameters)
+    f1 <- pOverA(parameters[1], parameters[2]) #pOverA(1/3, log2(100))
+    f2 <- function(x)(diff(range(x, na.rm = T)) > log2(1.5))
+    ff <- filterfun(f1, f2)
+    index <- genefilter(exprs(eSet), ff)
+    return(eSet[index, ])
+  } else if (method == "nofilter"){
+    return(eSet)
+  }
+}
+
+```
+
+
+
+## Middle result input
+
+```{r}
+
+```
+
 
 
 ## Function for DE
+The testing_choose, which contain the limma with bayes and wilcoxon rank-sum test with bayes estimation
+```{r testing_choose function}
+testing_choose <- function(eSet, method, parameters, group){
+    CLF_CLS.level    <- gl(n = 2, k =3, labels = c("CLF", "CLS"))
+    CLF_sphere.level <- gl(n = 2, k =3, labels = c("CLF", "Sphere"))
+    CLS_sphere.level <- gl(n = 2, k =3, labels = c("CLS", "Sphere"))
+    paired.level.list <- list(CLF_CLS.level, CLF_sphere.level, CLS_sphere.level)
+    contrast.vector <- c("CLF - CLS", "CLF - Sphere", "CLS - Sphere")
+    print(paste("Doing the group", group ))
+   if (method == "limma") {
+     print("Choose the method limma + bayes")
+     design.list <- model.matrix(~0+paired.level.list[[group]])
+     colnames(design.list) <- levels( paired.level.list[[group]] )
+     print("HERE2")
+     fit.list <- lmFit(eSet, design.list)
+     print(paste("Finish the limma fit in group",group))
+    contrast.list <- makeContrasts(contrasts = contrast.vector[group], levels = design.list)
+    fit.list <- contrasts.fit(fit.list, contrast.list)
+    fit.list <- eBayes(fit.list)
+    print(paste("Finish the Bayes in group",group))
+    top.list <- topTable(fit.list, coef=contrast.vector[group], number=nrow(fit.list), adjust.method = "BH", p.value = parameters[1]) #parameter=c(0.05)
+    print(paste("Finish the testing in group",group))
+    return(top.list)
+  } else if ( method == "wilcox") {
+    print("Choose the method wilcox rank-sum test + bayes")
+    print(parameters)
+    mw.list <- MultiWilcoxonTest(eSet, paired.level.list[[group]])
+    mw <- mw.list
+    print("HERE IN WILCOX")
+    tidy.data <- data.frame(probe = names(mw@rank.sum.statistics), rank.sum.statistics = unname(mw@rank.sum.statistics))
+    rownames(tidy.data) <- names(mw@rank.sum.statistics[])
+    tidy.data <- tidy.data[unname(selectSignificant(mw, prior = parameters[1], significance = parameters[2])),]  # parameters = c(0.1, 0.05)
+    print(head(tidy.data))
+    return(tidy.data)
+  }
+}
+
+```
+
+
+
+
+the wilcoxon rank-sum test with the parellel computing method boosting
+```{r testing_wilcox}
+testing_wilcox <- function(eSet, adj.method="BH"){
+  registerDoParallel(cores=4)
+  expression <- exprs(eSet)
+  
+  wilcox.result  <- foreach(i = 1:nrow(expression)) %dopar% {
+    wilcox.test(expression[i,1:3],expression[i,4:6], correct = FALSE, paired = FALSE) %>%
+      tidy %>% mutate(gene = rownames(expression)[i])
+  }
+  wilcox.result <- invoke(rbind, map(wilcox.result,data.frame))
+  #do.call(rbind, lapply(wilcox.result,data.frame))
+  wilcox.result <- as.data.frame(wilcox.result)
+  rownames(wilcox.result) <- wilcox.result$gene
+  wilcox.result <- wilcox.result %>%
+    dplyr::select(gene,statistic,p.value,-method, -alternative)%>%
+    mutate(adjusted.p = p.adjust(p.value, method=adj.method),
+                                            adjusted.method = adj.method)
+  return(wilcox.result)
+}
+
+```
+
+
+
+## Visualization
+
+
+```{r venndiagram}
+
+area.1 <- length(CLF_CLS.probe)
+area.2 <- length(CLF_sphere.probe)
+area.3 <- length(CLS_sphere.probe)
+area.12 <- length(intersect(CLF_CLS.probe, CLF_sphere.probe))
+area.23 <- length(intersect(CLF_sphere.probe,CLS_sphere.probe))
+area.13 <- length(intersect(CLF_CLS.probe, CLS_sphere.probe))
+area.123 <- length(intersect(intersect(CLF_CLS.probe, CLF_sphere.probe),CLS_sphere.probe))
+area.list <- list(area.1, area.2, area.3, area.12, area.23, area.13, area.123)
+
+
+#make the Venn Diagram
+
+library(VennDiagram)
+#save the output vennDiagram into .tiff file
+venn.diagram(list(CLF_CLS=CLF_CLS.probe , CLS_Sphere=CLS_sphere.probe, CLF_Sphere=CLF_sphere.probe), fill=c("red","green","yellow"), alpha=c(0.5, 0.5, 0.5), filename="VennDiagram_NEW_CLF-CLS_CLS-Sphere_CLF-Sphere.tiff")
+
+#plot into the device
+draw.triple.venn(area1 = area.list[[1]], area2 = area.list[[2]], area3 = area.list[[3]], n12 = area.list[[4]], n23 = area.list[[5]], n13 = area.list[[6]],
+                   n123 = area.list[[7]], category = c("CLF_CLS", "CLF_Sphere", "CLS_Sphere"), lty = "blank",
+                   fill = c("skyblue", "pink1", "mediumorchid"))
+
+```
+
+
+
+
+
+
+
+
+
+
+
