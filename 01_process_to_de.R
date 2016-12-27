@@ -1,0 +1,691 @@
+#microarray 2016/11/02
+#20160316
+# Mon Dec 12 18:07:35 2016 ------------------------------
+
+
+#library in the source R code
+#library(affy) #
+#library(GEOquery) #
+#library(hgu133plus2cdf) #
+#library(ggplot2)
+#library(dplyr)
+#library(limma)
+#library(annotate)
+#library(hgu133plus2.db)
+#library(affy)
+source("/Users/Weitinglin/Documents/R_scripts/Lab/microarray201610/microarry_function.R")
+library(tidyr)
+library(pryr)
+library(affyPLM)
+
+
+
+
+
+#=====================input the data================================
+data.path  <- file.path("/Users/Weitinglin/Documents/2016 實驗室資料處理/201510 microarray/raw data 20100114/set 8 CLS CLF Sphere")
+experiment.set <- c ( rep ("set8_withfibroblast" , 3 ) , rep ( "set8_withoutfibroblast" , 3 ), rep("set8_sphere", 3) )
+
+
+celfile.set <- do_phenodata(data.path = data.path, experiment.set = experiment.set)
+
+#=====================preprocess the data ======
+#use the mas5,in order not to log twice
+Exprs.data <- mas5 ( celfile.set , normalize = FALSE, analysis = "absolute", sc = 500)
+
+
+
+##expression profile
+ecelfile.set <- exprs ( Exprs.data )
+
+
+
+# expression boxplot ------------------------------------------------------
+boxplot.data <- as.data.frame(log2(ecelfile.set+1))
+boxplot.data$probe <- rownames(boxplot.data)
+boxplot.data <- boxplot.data %>% tidyr::gather("Sample","value",-probe)
+ggplot(data = boxplot.data, aes(x = Sample, y = value)) +
+  geom_boxplot(aes(fill = Sample)) 
+
+
+# cluster -----------------------------------------------------------------
+
+##clustering 
+library(latticeExtra)
+dd <- dist2(log2(ecelfile.set+1))
+dd <- dist2(norm)
+dd <- as.matrix(dist(t(log2(Exprs.data.median+1)), method = "euclidean"))
+#euclidean, maximum, manhattan, canberra, binary, mikowski
+dd <- dist2(log2(exprs(Exprs.data )+1))
+diag(dd) <- 0
+dd.row <- as.dendrogram(hclust(as.dist(dd)))
+row.ord <- order.dendrogram(dd.row)
+legend <- list(top = list(fun= dendrogramGrob, args = list(x = dd.row, side="top")))
+lp <- levelplot(dd[row.ord, row.ord], scales = list(x = list(rot=90)), xlab="", ylab="",legend=legend)
+plot(lp)
+
+
+# PCA ---------------------------------------------------------------------
+t <- t(ecelfile.set)
+t <- t(norm)
+pca1 <- prcomp(t, scale. = TRUE)
+library(scatterplot3d)
+s3d <- scatterplot3d(x = pca1$x[,1], y = pca1$x[,2], z = pca1$x[,3], xlab="PC1", ylab="PC2", zlab="PC3")
+s3d.coords <- s3d$xyz.convert(x = pca1$x[,1], y = pca1$x[,2], z = pca1$x[,3])
+text(s3d.coords$x, s3d.coords$y, labels=row.names(pca1$x), cex = .5, pos=4)
+
+library(plotly)
+p <- plot_ly(test, x = ~PC1, y = ~PC2, z = ~PC3, color = ~sample, colors = c('#BF382A', '#0C4B8E')) %>%
+  add_markers() %>%
+  layout(scene = list(xaxis = list(title = 'PC1'),
+                      yaxis = list(title = 'PC2'),
+                      zaxis = list(title = 'PC3')))
+#========================quantile normalization===========================
+#Method Quantile Normalization+log2
+
+norm <- quantile_normalization(ecelfile.set = Exprs.data, method = "median")
+
+
+# boxplot after QN --------------------------------------------------------
+boxplot.data <- as.data.frame(norm)
+boxplot.data$probe <- rownames(boxplot.data)
+boxplot.data <- boxplot.data %>% tidyr::gather("Sample","value",-probe)
+ggplot(data = boxplot.data, aes(x = Sample, y = value)) +
+  geom_boxplot(aes(fill = Sample)) 
+
+
+
+
+
+
+
+norm<- data.matrix(norm)
+
+#packed back to affybash
+Quantile_Normalization_eSet <-new("ExpressionSet", 
+                                  phenoData = phenoData(celfile.set), 
+                                  annotation   = annotation(celfile.set),
+                                  protocolData = protocolData(celfile.set),
+                                  experimentData = experimentData(celfile.set),
+                                  exprs = norm )
+#GO exploration
+probererlateTF <- read_delim("/home/weitinglin66/LungCSC_microarray/rawdata/proberelateTF.txt", delim = " ")
+
+#=========================experiment set up=======================
+
+#filter the genes that at least 2 out of 6 samples have an intensity of 100,
+#at least max/min intensity is 1.5
+
+#plot row standard deviations versus row means
+library(vsn)
+meanSdPlot(eDATA)
+
+
+# EX01: MAS5,QN,LOG2, without filter, wilcoxon rank-sum  --------------------------------
+
+#without filter
+top.CLF_CLS      <- testing_wilcox(Quantile_Normalization_eSet[,1:6], adj.method = "BH")
+top.CLF_Sphere   <- testing_wilcox(Quantile_Normalization_eSet[,c(1:3,7:9)], adj.method = "BH")
+top.CLS_Sphere   <- testing_wilcox(Quantile_Normalization_eSet[,4:9], adj.method = "BH")
+
+write.csv(top.CLF_CLS, file = "CLF_CLS_wilcox_adj_nofilter.csv")
+write.csv(top.CLF_Sphere, file = "CLF_Sphere_wilcox_adj_nofilter.csv")
+write.csv(top.CLS_Sphere, file = "CLS_Sphere_wilcox_adj_nofilter.csv")
+
+
+CLF_CLS.probe    <- (top.CLF_CLS %>% filter(p.value < 0.05))$gene
+CLF_sphere.probe <- (top.CLF_Sphere %>% filter(p.value < 0.05))$gene
+CLS_sphere.probe <-  (top.CLS_Sphere %>% filter(p.value < 0.05))$gene
+
+print("in the area list") 
+area.1 <- length(CLF_CLS.probe)
+area.2 <- length(CLF_sphere.probe)
+area.3 <- length(CLS_sphere.probe)
+area.12 <- length(intersect(CLF_CLS.probe, CLF_sphere.probe))
+area.23 <- length(intersect(CLF_sphere.probe,CLS_sphere.probe))
+area.13 <- length(intersect(CLF_CLS.probe, CLS_sphere.probe))
+area.123 <- length(intersect(intersect(CLF_CLS.probe, CLF_sphere.probe),CLS_sphere.probe))
+area.list <- list(area.1, area.2, area.3, area.12, area.23, area.13, area.123)
+#intersect, union, setdiff
+draw.triple.venn(area1 = area.list[[1]], area2 = area.list[[2]], area3 = area.list[[3]], n12 = area.list[[4]], n23 = area.list[[5]], n13 = area.list[[6]],
+                 n123 = area.list[[7]], category = c("CLF_CLS", "CLF_Sphere", "CLS_Sphere"), lty = "blank",
+                 fill = c("skyblue", "pink1", "mediumorchid"))
+
+target.list <- setdiff(intersect(CLF_CLS.probe, CLS_sphere.probe), CLF_sphere.probe )
+
+target.probe <- probererlateTF %>% filter(Probe %in% target.list)
+
+getSYMBOL(target.probe$Probe, "hgu133plus2")
+#GO exploration
+probererlateTF <- read_delim("/home/weitinglin66/LungCSC_microarray/rawdata/proberelateTF.txt", delim = " ")
+
+
+
+#withoutfilter but seperate normalization
+CLF_CLS.norm.data.path    <- file.path("/home/weitinglin66/LungCSC_microarray/result/CLF_CLS.norm.txt")
+CLF_sphere.norm.data.path <- file.path("/home/weitinglin66/LungCSC_microarray/result/CLF_sphere.norm.txt")
+CLS_sphere.norm.data.path <- file.path("/home/weitinglin66/LungCSC_microarray/result/CLS_sphere.norm.txt")
+CLF_CLS.norm <- read.delim(CLF_CLS.norm.data.path,
+                           sep ="\t",
+                           header = TRUE,
+                           check.names = FALSE)
+CLF_CLS.norm <- data.matrix(CLF_CLS.norm)
+CLF_sphere.norm <- read.delim(CLF_sphere.norm.data.path,
+                              sep ="\t",
+                              header = TRUE,
+                              check.names = FALSE)
+CLF_sphere.norm <- data.matrix(CLF_sphere.norm)
+CLS_sphere.norm  <- read.delim(CLS_sphere.norm.data.path,
+                               sep ="\t",
+                               header = TRUE,
+                               check.names = FALSE)
+CLS_sphere.norm <- data.matrix(CLS_sphere.norm)
+
+QN_CLF_CLS_eSet <-new("ExpressionSet",
+                      phenoData = phenoData(celfile.set[,1:6]),
+                      annotation   = annotation(celfile.set[,1:6]),
+                      protocolData = protocolData(celfile.set[,1:6]),
+                      experimentData = experimentData(celfile.set[,1:6]),
+                      exprs = CLF_CLS.norm )
+QN_CLF_Sphere_eSet <-new("ExpressionSet",
+                         phenoData = phenoData(celfile.set[,c(1:3,7:9)]),
+                         annotation   = annotation(celfile.set[,c(1:3,7:9)]),
+                         protocolData = protocolData(celfile.set[,c(1:3,7:9)]),
+                         experimentData = experimentData(celfile.set[,c(1:3,7:9)]),
+                         exprs = CLF_sphere.norm )
+QN_CLS_Sphere_eSet <-new("ExpressionSet",
+                         phenoData = phenoData(celfile.set[,4:9]),
+                         annotation   = annotation(celfile.set[,4:9]),
+                         protocolData = protocolData(celfile.set[,4:9]),
+                         experimentData = experimentData(celfile.set[,4:9]),
+                         exprs = CLS_sphere.norm )
+
+
+sepQN.CLF_CLS      <- testing_wilcox(QN_CLF_CLS_eSet, adj.method = "BH")
+sepQN.CLF_Sphere   <- testing_wilcox(QN_CLF_Sphere_eSet, adj.method = "BH")
+sepQN.CLS_Sphere   <- testing_wilcox(QN_CLS_Sphere_eSet, adj.method = "BH")
+
+write.csv(sepQN.CLF_CLS, file = "sepQNCLF_CLS_wilcox_adj_nofilter.csv")
+write.csv(sepQN.CLF_Sphere, file = "sepQNCLF_Sphere_wilcox_adj_nofilter.csv")
+write.csv(sepQN.CLS_Sphere, file = "sepQNCLS_Sphere_wilcox_adj_nofilter.csv")
+
+
+CLF_CLS.probe    <- (sepQN.CLF_CLS %>% filter(p.value < 0.05))$gene
+CLF_sphere.probe <- (sepQN.CLF_Sphere %>% filter(p.value < 0.05))$gene
+CLS_sphere.probe <-  (sepQN.CLS_Sphere %>% filter(p.value < 0.05))$gene
+
+sepQN.CLF_CLS    <- sepQN.CLF_CLS %>% mutate(case="CLF_CLS")
+sepQN.CLF_Sphere <- sepQN.CLF_Sphere %>% mutate(case =" CLF_Sphere")
+sepQN.CLS_Sphere <- sepQN.CLS_Sphere %>% mutate(case = "CLS_Sphere")
+total <- bind_rows(sepQN.CLF_CLS, sepQN.CLF_Sphere, sepQN.CLS_Sphere)
+(total %>% filter(case == "CLF_CLS") %>% filter( p.value < 0.1))$p.value %>% hist(.,main = "CLS_CLF",breaks=seq(0,0.1,by=0.01)) + abline(v=0.05, col="red")
+(total %>% filter(case == "CLS_Sphere") %>% filter( p.value < 0.1))$p.value  %>% hist(., main ="CLS_Sphere",breaks=seq(0,0.1,by=0.01)) + abline(v=0.05, col="red")
+(total %>% filter(case != "CLS_Sphere" & case != "CLF_CLS") %>% filter( p.value < 0.1))$p.value %>% hist(., main = "CLF_Sphere",breaks=seq(0,0.1,by=0.01)) + abline(v=0.05, col="red")
+
+(total %>% filter(case == "CLF_CLS") %>% filter( adjusted.p < 0.5))$adjusted.p %>% hist(.,main = "CLS_CLF",breaks=seq(0,0.5,by=0.01)) + abline(v=0.05, col="red")
+(total %>% filter(case == "CLS_Sphere") %>% filter( adjusted.p < 0.5))$adjusted.p  %>% hist(., main ="CLS_Sphere",breaks=seq(0,0.5,by=0.01)) + abline(v=0.05, col="red")
+(total %>% filter(case != "CLS_Sphere" & case != "CLF_CLS") %>% filter( adjusted.p < 0.5))$adjusted.p %>% hist(., main = "CLF_Sphere",breaks=seq(0,0.5,by=0.01)) + abline(v=0.05, col="red")
+
+ggplot(data=total, aes(x=p.value)) + geom_density(aes(color=case))
+
+
+print("in the area list") 
+area.1 <- length(CLF_CLS.probe)
+area.2 <- length(CLF_sphere.probe)
+area.3 <- length(CLS_sphere.probe)
+area.12 <- length(intersect(CLF_CLS.probe, CLF_sphere.probe))
+area.23 <- length(intersect(CLF_sphere.probe,CLS_sphere.probe))
+area.13 <- length(intersect(CLF_CLS.probe, CLS_sphere.probe))
+area.123 <- length(intersect(intersect(CLF_CLS.probe, CLF_sphere.probe),CLS_sphere.probe))
+area.list <- list(area.1, area.2, area.3, area.12, area.23, area.13, area.123)
+#intersect, union, setdiff
+draw.triple.venn(area1 = area.list[[1]], area2 = area.list[[2]], area3 = area.list[[3]], n12 = area.list[[4]], n23 = area.list[[5]], n13 = area.list[[6]],
+                 n123 = area.list[[7]], category = c("CLF_CLS", "CLF_Sphere", "CLS_Sphere"), lty = "blank",
+                 fill = c("skyblue", "pink1", "mediumorchid"))
+
+target.list <- setdiff(intersect(CLF_CLS.probe, CLS_sphere.probe), CLF_sphere.probe )
+
+target.probe <- probererlateTF %>% filter(Probe %in% target.list)
+
+
+# EX02: MAS5,QN,LOG2, with filtering by 50%, wilcoxon-rank-sum test -------
+#filter for wilcox test on variance 50%
+postfilteQN_CLF_CLS_eSet <- prefilter_choose(QN_CLF_CLS_eSet, method = "filterbyvariance", parameters = c(0.5))
+postfilteQN_CLF_Sphere_eSet <- prefilter_choose(QN_CLF_Sphere_eSet, method = "filterbyvariance", parameters = c(0.5))
+postfilteQN_CLS_Sphere_eSet <- prefilter_choose(QN_CLS_Sphere_eSet, method = "filterbyvariance", parameters = c(0.5))
+
+
+postfilteCLF_CLS      <- testing_wilcox(postfilteQN_CLF_CLS_eSet, adj.method = "BH")
+postfilteCLF_Sphere   <- testing_wilcox(postfilteQN_CLF_Sphere_eSet, adj.method = "BH")
+postfilteCLS_Sphere   <- testing_wilcox(postfilteQN_CLS_Sphere_eSet, adj.method = "BH")
+
+CLF_CLS.probe    <- (postfilteCLF_CLS %>% filter(p.value < 0.05))$gene
+CLF_sphere.probe <- (postfilteCLF_Sphere %>% filter(p.value < 0.05))$gene
+CLS_sphere.probe <-  (postfilteCLS_Sphere %>% filter(p.value < 0.05))$gene
+
+print("in the area list") 
+area.1 <- length(CLF_CLS.probe)
+area.2 <- length(CLF_sphere.probe)
+area.3 <- length(CLS_sphere.probe)
+area.12 <- length(intersect(CLF_CLS.probe, CLF_sphere.probe))
+area.23 <- length(intersect(CLF_sphere.probe,CLS_sphere.probe))
+area.13 <- length(intersect(CLF_CLS.probe, CLS_sphere.probe))
+area.123 <- length(intersect(intersect(CLF_CLS.probe, CLF_sphere.probe),CLS_sphere.probe))
+area.list <- list(area.1, area.2, area.3, area.12, area.23, area.13, area.123)
+#intersect, union, setdiff
+draw.triple.venn(area1 = area.list[[1]], area2 = area.list[[2]], area3 = area.list[[3]], n12 = area.list[[4]], n23 = area.list[[5]], n13 = area.list[[6]],
+                 n123 = area.list[[7]], category = c("CLF_CLS", "CLF_Sphere", "CLS_Sphere"), lty = "blank",
+                 fill = c("skyblue", "pink1", "mediumorchid"))
+
+target.list <- setdiff(intersect(CLF_CLS.probe, CLS_sphere.probe), CLF_sphere.probe )
+
+target.probe <- probererlateTF %>% filter(Probe %in% target.list)
+
+
+
+
+
+# EX03: MASS, QN, no LOG2, Wilcoxon-rank sum test -------------------------
+# 2016.11.15
+ecelfile.set <- exprs ( Exprs.data )
+
+
+# do the quantile normalization 
+a <- ecelfile.set
+asort <- apply(a,2,sort)
+loc<-apply(a,2,order)  #原本probe的位置apply
+#step 2 :Takes the median of across rows
+amean1<-matrix(rep(apply(asort,1,median),dim(a)[2]),nrow=length(apply(asort,1,median)))
+#step 3 :Rearranging each column to make the same ordering as the original data
+norm<-matrix(0,dim(a)[1],dim(a)[2])
+
+for(i in 1:dim(amean1)[2]){
+  #norm<-matrix(0,dim(amean)[1],1)
+  for (j in 1:dim(amean1)[1]){
+    #cat(loc[j,i],"\t",i,"\t",j,"\t",amean[j,i],"\n")
+    norm[loc[j,i],i]<-amean1[j,i]
+  }
+}
+
+rownames(norm) <- rownames(ecelfile.set)
+colnames(norm) <- colnames(ecelfile.set)
+#check the result of the QN
+boxplot(log2(norm+1))
+
+
+
+adj.method <- "BH"
+
+registerDoParallel(cores=8)
+#function
+expression <- norm[1:1000,1:6]
+
+wilcoxon_test <- function(expression, adj.method = "BD"){
+  gene.list <- rownames(expression)  
+  wilcox.result  <- foreach(i = 1:nrow(expression)) %dopar% {
+    wilcox.test(expression[i,1:3],expression[i,4:6], correct = FALSE, paired = FALSE) %>%
+      tidy %>% mutate(gene = gene.list[i])
+  }
+  wilcox.result <- invoke(rbind, map(wilcox.result,data.frame))
+  
+  wilcox.result <- as.data.frame(wilcox.result)
+  rownames(wilcox.result) <- wilcox.result$gene
+  wilcox.result <- wilcox.result %>%
+    dplyr::select(gene,statistic,p.value,-method, -alternative)%>%
+    mutate(adjusted.p = p.adjust(p.value, method=adj.method),
+           adjusted.method = adj.method)
+  return(wilcox.result)
+}
+#for CLS-CLF
+nologQN.CLF_CLS      <- wilcoxon_test(expression = norm[,1:6], adj.method = "BH")
+nologQN.CLF_Sphere   <- wilcoxon_test(expression = norm[,c(1:3,7:9)], adj.method = "BH")
+nologQN.CLS_Sphere   <- wilcoxon_test(expression = norm[,4:9], adj.method = "BH")
+
+write.table(nologQN.CLF_CLS,"nologQNwilcoxCLF_CLS.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+write.table(nologQN.CLF_Sphere,"nologQNwilcoxCLF_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+write.table(nologQN.CLS_Sphere,"nologQNwilcoxCLS_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+
+#check the p value
+CLF_CLS.probe    <- (nologQN.CLF_CLS %>% filter(p.value < 0.05))$gene
+CLF_sphere.probe <- (nologQN.CLF_Sphere %>% filter(p.value < 0.05))$gene
+CLS_sphere.probe <-  (nologQN.CLS_Sphere %>% filter(p.value < 0.05))$gene
+
+print("in the area list") 
+#draw the venndiagram
+draw_venngram(CLF_CLS.probe, CLF_sphere.probe, CLS_sphere.probe)
+
+target.list <- setdiff(intersect(CLF_CLS.probe, CLS_sphere.probe), CLF_sphere.probe )
+
+target.probe <- probererlateTF %>% filter(Probe %in% target.list)
+
+
+
+# EX04: MAS5, QN, LOG2,without filter, two sample t.test ------------------
+ecelfile.set <- exprs ( Exprs.data )
+
+#QN + log2
+
+norm <- quantile_normalization(ecelfile.set = Exprs.data)
+
+#two.sample t.test
+
+adj.method <- "BH"
+
+registerDoParallel(cores=8)
+#function
+
+
+t_test <- function(expression, adj.method = "BH"){
+  gene.list <- rownames(expression)  
+  t.result  <- foreach(i = 1:nrow(expression)) %dopar% {
+    t.test(expression[i,1:3],expression[i,4:6], paired = FALSE,  conf.level = 0.95) %>%
+      tidy %>% mutate(gene = gene.list[i])
+  }
+  t.result <- invoke(rbind, map(t.result,data.frame))
+  
+  t.result <- as.data.frame(t.result)
+  rownames(t.result) <- t.result$gene
+  t.result <- t.result %>%
+    dplyr::select(-method, -alternative)%>%
+    mutate(adjusted.p = p.adjust(p.value, method=adj.method),
+           adjusted.method = adj.method)
+  return(t.result)
+}
+#“holm”, “hochberg”, “hommel”, “bonferroni”, “BH”, “BY”, “fdr”, “none”
+
+#for CLS-CLF
+t.CLF_CLS      <- t_test(expression = norm[,1:6], adj.method = "BH")
+t.CLF_Sphere   <- t_test(expression = norm[,c(1:3,7:9)], adj.method = "BH")
+t.CLS_Sphere   <- t_test(expression = norm[,4:9], adj.method = "BH")
+
+write.table(t.CLF_CLS,"QNttestCLF_CLS.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+write.table(t.CLF_Sphere,"QNttestCLF_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+write.table(t.CLS_Sphere,"QNttestCLS_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+
+hist(t.CLF_CLS$adjusted.p) + abline(v = 0.05, col = "red")
+hist(t.CLF_Sphere$adjusted.p) + abline(v = 0.05, col = "red")
+hist(t.CLS_Sphere$adjusted.p) + abline(v = 0.05, col = "red")
+
+#pvalue
+CLF_CLS.probe    <- (t.CLF_CLS %>% filter(p.value < 0.05))$gene
+CLF_sphere.probe <- (t.CLF_Sphere %>% filter(p.value < 0.05))$gene
+CLS_sphere.probe <-  (t.CLS_Sphere %>% filter(p.value < 0.05))$gene
+#adjusted.p 0.05
+CLF_CLS.probe    <- (t.CLF_CLS %>% filter(adjusted.p < 0.05))$gene
+CLF_sphere.probe <- (t.CLF_Sphere %>% filter(adjusted.p < 0.05))$gene
+CLS_sphere.probe <-  (t.CLS_Sphere %>% filter(adjusted.p < 0.05))$gene
+
+
+draw_venngram(CLF_CLS.probe, CLF_sphere.probe, CLS_sphere.probe)
+
+length(CLF_CLS.probe)
+length(CLF_sphere.probe)
+length(CLS_sphere.probe)
+#adjusted.p 0.01
+CLF_CLS.probe    <- (t.CLF_CLS %>% filter(adjusted.p < 0.01))$gene
+CLF_sphere.probe <- (t.CLF_Sphere %>% filter(adjusted.p < 0.01))$gene
+CLS_sphere.probe <-  (t.CLS_Sphere %>% filter(adjusted.p < 0.01))$gene
+
+
+draw_venngram(CLF_CLS.probe, CLF_sphere.probe, CLS_sphere.probe)
+
+length(CLF_CLS.probe)
+length(CLF_sphere.probe)
+length(CLS_sphere.probe)
+
+#adjusted.p 0.001
+CLF_CLS.probe    <- (t.CLF_CLS %>% filter(adjusted.p < 0.001))$gene
+CLF_sphere.probe <- (t.CLF_Sphere %>% filter(adjusted.p < 0.001))$gene
+CLS_sphere.probe <-  (t.CLS_Sphere %>% filter(adjusted.p < 0.001))$gene
+
+
+draw_venngram(CLF_CLS.probe, CLF_sphere.probe, CLS_sphere.probe)
+
+length(CLF_CLS.probe)
+length(CLF_sphere.probe)
+length(CLS_sphere.probe)
+
+#figure out the TF related probeset
+
+target.list <- setdiff(intersect(CLF_CLS.probe, CLS_sphere.probe), CLF_sphere.probe )
+length(target.list)
+target.probe <- probererlateTF %>% filter(Probe %in% target.list)
+dim(target.probe)
+target.probe$Total %>% table()
+
+
+# EX05: MAS5, QN, LOG2, with filter by 0.5, two sample t.test -------------
+
+ecelfile.set <- exprs ( Exprs.data )
+
+#QN + log2
+
+norm <- quantile_normalization(ecelfile.set = Exprs.data)
+
+#filter by variance 
+Quantile_Normalization_eSet <-new("ExpressionSet", 
+                                  phenoData = phenoData(celfile.set), 
+                                  annotation   = annotation(celfile.set),
+                                  protocolData = protocolData(celfile.set),
+                                  experimentData = experimentData(celfile.set),
+                                  exprs = norm )
+QN_CLF_CLS_eSet     <- Quantile_Normalization_eSet[,1:6]
+QN_CLF_Sphere_eSet  <- Quantile_Normalization_eSet[,c(1:3,7:9)]
+QN_CLS_Sphere_eSet  <- Quantile_Normalization_eSet[,c(4:9)]
+
+filterQN_CLF_CLS   <- prefilter_choose(QN_CLF_CLS_eSet , method = "filterbyvariance", parameters = c(0.5))
+filterQN_CLF_Sphere<- prefilter_choose(QN_CLF_Sphere_eSet , method = "filterbyvariance", parameters = c(0.5))
+filterQN_CLS_Sphere<- prefilter_choose(QN_CLS_Sphere_eSet , method = "filterbyvariance", parameters = c(0.5))
+
+#for CLS-CLF
+f.t.CLF_CLS      <- t_test(expression = exprs(filterQN_CLF_CLS), adj.method = "BH")
+f.t.CLF_Sphere   <- t_test(expression = exprs(filterQN_CLF_Sphere), adj.method = "BH")
+f.t.CLS_Sphere   <- t_test(expression = exprs(filterQN_CLS_Sphere), adj.method = "BH")
+
+write.table(f.t.CLF_CLS,"filter50QNttestCLF_CLS.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+write.table(f.t.CLF_Sphere,"filter50QNttestCLF_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+write.table(f.t.CLS_Sphere,"filter50QNttestCLS_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+
+hist(f.t.CLF_CLS$adjusted.p) + abline(v = 0.05, col = "red")
+hist(f.t.CLF_Sphere$adjusted.p) + abline(v = 0.05, col = "red")
+hist(f.t.CLS_Sphere$adjusted.p) + abline(v = 0.05, col = "red")
+
+#pvalue
+CLF_CLS.probe    <- (f.t.CLF_CLS %>% filter(p.value < 0.05))$gene
+CLF_sphere.probe <- (f.t.CLF_Sphere %>% filter(p.value < 0.05))$gene
+CLS_sphere.probe <-  (f.t.CLS_Sphere %>% filter(p.value < 0.05))$gene
+#adjusted.p 0.05
+CLF_CLS.probe    <- (f.t.CLF_CLS %>% filter(adjusted.p < 0.05))$gene
+CLF_sphere.probe <- (f.t.CLF_Sphere %>% filter(adjusted.p < 0.05))$gene
+CLS_sphere.probe <-  (f.t.CLS_Sphere %>% filter(adjusted.p < 0.05))$gene
+
+
+draw_venngram(CLF_CLS.probe, CLF_sphere.probe, CLS_sphere.probe)
+
+length(CLF_CLS.probe)
+length(CLF_sphere.probe)
+length(CLS_sphere.probe)
+#adjusted.p 0.01
+CLF_CLS.probe    <- (f.t.CLF_CLS %>% filter(adjusted.p < 0.01))$gene
+CLF_sphere.probe <- (f.t.CLF_Sphere %>% filter(adjusted.p < 0.01))$gene
+CLS_sphere.probe <-  (f.t.CLS_Sphere %>% filter(adjusted.p < 0.01))$gene
+
+
+draw_venngram(CLF_CLS.probe, CLF_sphere.probe, CLS_sphere.probe)
+
+length(CLF_CLS.probe)
+length(CLF_sphere.probe)
+length(CLS_sphere.probe)
+
+#adjusted.p 0.001
+CLF_CLS.probe    <- (f.t.CLF_CLS %>% filter(adjusted.p < 0.001))$gene
+CLF_sphere.probe <- (f.t.CLF_Sphere %>% filter(adjusted.p < 0.001))$gene
+CLS_sphere.probe <-  (f.t.CLS_Sphere %>% filter(adjusted.p < 0.001))$gene
+
+
+draw_venngram(CLF_CLS.probe, CLF_sphere.probe, CLS_sphere.probe)
+
+length(CLF_CLS.probe)
+length(CLF_sphere.probe)
+length(CLS_sphere.probe)
+
+#figure out the TF related probeset
+
+target.list <- setdiff(intersect(CLF_CLS.probe, CLS_sphere.probe), CLF_sphere.probe )
+length(target.list)
+target.probe <- probererlateTF %>% filter(Probe %in% target.list)
+dim(target.probe)
+target.probe$Total %>% table()
+target.probe$Probe %>% getSYMBOL(., "hgu133plus2")
+
+target.list %>% getSYMBOL(., "hgu133plus2")
+
+
+# **************************************** --------------------------------
+
+
+# EX06:Consider Direction, T-test,no filter -------------------------------
+ecelfile.set <- exprs ( Exprs.data )
+
+#QN + log2
+
+norm <- quantile_normalization(ecelfile.set = Exprs.data)
+
+#two.sample t.test
+
+adj.method <- "BH"
+
+registerDoParallel(cores=8)
+#function
+
+
+t_test <- function(expression, adj.method = "BH", hypothesis = "greater"){
+  gene.list <- rownames(expression)  
+  t.result  <- foreach(i = 1:nrow(expression)) %dopar% {
+    t.test(expression[i,1:3],expression[i,4:6],alternative = hypothesis, paired = FALSE,  conf.level = 0.95) %>%
+      tidy %>% mutate(gene = gene.list[i])
+  }
+  t.result <- invoke(rbind, map(t.result,data.frame))
+  
+  t.result <- as.data.frame(t.result)
+  rownames(t.result) <- t.result$gene
+  t.result <- t.result %>%
+    dplyr::select(-method, -alternative)%>%
+    mutate(adjusted.p = p.adjust(p.value, method=adj.method),
+           adjusted.method = adj.method)
+  return(t.result)
+}
+#“holm”, “hochberg”, “hommel”, “bonferroni”, “BH”, “BY”, “fdr”, “none”
+
+#for CLS-CLF
+# _greater ----------------------------------------------------------------
+t.greater.CLF_CLS      <- t_test(expression = norm[,1:6], adj.method = "BH", hypothesis = "greater")
+t.greater.Sphere_CLF   <- t_test(expression = norm[,c(7:9, 1:3)], adj.method = "BH", hypothesis = "greater")
+t.greater.Sphere_CLS   <- t_test(expression = norm[,c(7:9, 4:6)], adj.method = "BH", hypothesis = "greater")
+
+# _less -------------------------------------------------------------------
+t.less.CLF_CLS      <- t_test(expression = norm[,1:6], adj.method = "BH", hypothesis = "less")
+#the comparisom have change
+t.less.Sphere_CLF   <- t_test(expression = norm[,c(7:9, 1:3)], adj.method = "BH", hypothesis = "less")
+t.less.Sphere_CLS   <- t_test(expression = norm[,c(7:9, 4:6)], adj.method = "BH", hypothesis = "less")
+
+
+# _write table ------------------------------------------------------------
+
+write.table(t.greater.CLF_CLS,"greaterQNttestCLF_CLS.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+write.table(t.greater.Sphere_CLF,"greaterQNttestCLF_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+write.table(t.greater.Sphere_CLS,"greaterQNttestCLS_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+
+write.table(t.less.CLF_CLS,"lessQNttestCLF_CLS.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+write.table(t.less.Sphere_CLF,"lessQNttestCLF_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+write.table(t.less.Sphere_CLS,"lessQNttestCLS_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+
+
+
+# EX07:Consider Direction, T-test,filter by 0.5 ---------------------------
+ecelfile.set <- exprs ( Exprs.data )
+
+#QN + log2
+
+norm <- quantile_normalization(ecelfile.set = Exprs.data)
+
+#filter by variance 
+Quantile_Normalization_eSet <-new("ExpressionSet", 
+                                  phenoData = phenoData(celfile.set), 
+                                  annotation   = annotation(celfile.set),
+                                  protocolData = protocolData(celfile.set),
+                                  experimentData = experimentData(celfile.set),
+                                  exprs = norm )
+QN_CLF_CLS_eSet     <- Quantile_Normalization_eSet[,1:6]
+QN_Sphere_CLF_eSet  <- Quantile_Normalization_eSet[,c(7:9, 1:3)]
+QN_Sphere_CLS_eSet  <- Quantile_Normalization_eSet[,c(7:9, 4:6)]
+
+filterQN_CLF_CLS   <- prefilter_choose(QN_CLF_CLS_eSet , method = "filterbyvariance", parameters = c(0.5))
+filterQN_Sphere_CLF<- prefilter_choose(QN_Sphere_CLF_eSet , method = "filterbyvariance", parameters = c(0.5))
+filterQN_Sphere_CLS<- prefilter_choose(QN_Sphere_CLS_eSet , method = "filterbyvariance", parameters = c(0.5))
+
+# Post Filter Assessmnet --------------------------------------------------
+nofilter <- exprs(QN_CLF_CLS_eSet )
+nofilter <- as.data.frame(nofilter)
+nm1 <- colnames(nofilter)
+
+rowIQR <- function(x){
+  
+  d <- dim(x)[[1]]
+  n <- rep(0,time=d)
+  for (i in 1:d){
+    n[[i]] <- IQR(x[i,])
+  }
+  return(n)
+  
+}
+
+
+nofilter <- nofilter %>% mutate(IQR=rowIQR(as.matrix(.[nm1]))) 
+filter <- nofilter[nofilter$IQR > 0.825841347,]
+filter <- filter[filter$IQR > 0.825841347,]
+quantile(nofilter$IQR)
+length(nofilter$IQR)
+filter   <- exprs(filterQN_CLF_CLS)
+filter <- as.data.frame(filter)
+filter <- filter %>% mutate(IQR=rowIQR(as.matrix(.[nm1]))) 
+quantile(filter$IQR)
+length(filter$IQR)
+
+combine  <- bind_rows(nofilter, filter) 
+
+test1 <- combine %>% filter(type == "nofilter" && Sample == "CHW_CLF 13-6-1.CEL")
+test2 <-  combine %>% filter(type == "filter") %>% filter(Sample == "CHW_CLF 13-6-1.CEL") 
+
+ggplot(data = combine, aes(x = Sample, y = value)) +
+  geom_boxplot(aes(fill = Sample)) + 
+  geom_jitter(width=0.2, alpha=0.2) + 
+  facet_grid(type ~.)
+
+ggplot(data = combine, aes(x = value)) +
+  geom_density(aes(color = Sample)) + facet_grid(type ~.)
+
+
+
+#for CLS-CLF
+# _greater ----------------------------------------------------------------
+f.t.greater.CLF_CLS      <- t_test(expression = exprs(filterQN_CLF_CLS), adj.method = "BH", hypothesis = "greater")
+f.t.greater.Sphere_CLF   <- t_test(expression = exprs(filterQN_Sphere_CLF), adj.method = "BH", hypothesis = "greater")
+f.t.greater.Sphere_CLS   <- t_test(expression = exprs(filterQN_Sphere_CLS), adj.method = "BH", hypothesis = "greater")
+
+# _less -------------------------------------------------------------------
+f.t.less.CLF_CLS      <- t_test(expression = exprs(filterQN_CLF_CLS), adj.method = "BH", hypothesis = "less")
+f.t.less.Sphere_CLF   <- t_test(expression = exprs(filterQN_Sphere_CLF), adj.method = "BH", hypothesis = "less")
+f.t.less.Sphere_CLS   <- t_test(expression = exprs(filterQN_Sphere_CLS), adj.method = "BH", hypothesis = "less")
+
+
+# _write table ------------------------------------------------------------
+
+write.table(f.t.greater.CLF_CLS,"greaterfilter50QNttestCLF_CLS.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+write.table(f.t.greater.Sphere_CLF,"greaterfilter50QNttestCLF_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+write.table(f.t.greater.Sphere_CLS,"greaterfilter50QNttestCLS_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+
+write.table(f.t.less.CLF_CLS,"lessfilter50QNttestCLF_CLS.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+write.table(f.t.less.Sphere_CLF,"lessfilter50QNttestCLF_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+write.table(f.t.less.Sphere_CLS,"lessfilter50QNttestCLS_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+
