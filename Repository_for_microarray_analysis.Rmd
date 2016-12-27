@@ -27,7 +27,7 @@ This is the repository for the code used in microarray analysis.
 ## Input Microarray cel. file
 use the affy package to input the data. it's important to give the metadata for the experiment.
 
-```{r input, echo=FALSE}
+```{r _input, echo=FALSE}
  data.path  <- file.path("/Users/Weitinglin/Documents/2016 實驗室資料處理/201510 microarray/raw data 20100114/set 8 CLS CLF Sphere")
  experiment.set <- c ( rep ("set8_withfibroblast" , 3 ) , rep ( "set8_withoutfibroblast" , 3 ), rep("set8_sphere", 3) )
  
@@ -47,7 +47,7 @@ use the affy package to input the data. it's important to give the metadata for 
 ## Preprocess
 
 the preprocess step clustering can let us make sure the within group clustering analysis, to ensure the expreiement quality and build the overall sense of the data
-```{r clustering analysis}
+```{r _clustering analysis}
 ##clustering 
 library(latticeExtra)
 dd <- dist2(log2(exprs(Exprs.data)+1))
@@ -102,12 +102,12 @@ Exprs.data <- threestep(celfile.set, background = FALSE, normalize = FALSE, summ
 
 ## Normalization
 the quantile normalization method: first quantile normalization ( choose by median or mean )and then log transformation(log2)
-```{r quantile_normalization function}
+```{r _quantile_normalization function}
 #Quantile Normalization
 quantile_normalization <- function(ecelfile.set, method="mean"){
   a <- ecelfile.set
   asort <- apply(a,2,sort)
-  loc<-apply(a,2,order)  #原本probe的位置apply
+  loc<-apply(a,2,order)  #原本probe的位置applyl
   #step 2 :Takes the means of across rows
   if (method =="mean"){
   amean1<-matrix(rep(apply(asort,1,mean),dim(a)[2]),nrow=length(apply(asort,1,mean)))
@@ -135,7 +135,7 @@ quantile_normalization <- function(ecelfile.set, method="mean"){
 
 ## Prefiltering before the analysis
 According to the paper, which indicate the increase power with the prefilter method
-```{r prefilter method}
+```{r _prefilter method}
 
 prefilter_choose <- function(eSet, method, parameters){
   if ( method == "filterbyvariance"){
@@ -160,7 +160,28 @@ prefilter_choose <- function(eSet, method, parameters){
 
 ## Middle result input
 
-```{r}
+```{r _write and read}
+#save data into text
+write.table(original,"origin.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+write.table(ecelfile.set,"postMASS.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+
+#load data with the read.delim
+norm.load <- read.delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarry20161107andshiny/norm.txt",
+                        sep ="\t",
+                        header = TRUE,
+                        check.names = FALSE)
+norm.load <- read.delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarry20161107andshiny/norm.txt",
+                        sep ="\t",
+                        header = TRUE,
+                        check.names = FALSE)
+norm.load <- read.delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarry20161107andshiny/norm.txt",
+                        sep ="\t",
+                        header = TRUE,
+                        check.names = FALSE)
+
+
+#use the readr package: read_delim
+table.probe.relate.TF <- read_delim(probe.relatedTF.data.path, delim = " ", col_types = c("ciiii"))
 
 ```
 
@@ -168,7 +189,7 @@ prefilter_choose <- function(eSet, method, parameters){
 
 ## Function for DE
 The testing_choose, which contain the limma with bayes and wilcoxon rank-sum test with bayes estimation
-```{r testing_choose function}
+```{r _testing_choose function}
 testing_choose <- function(eSet, method, parameters, group){
     CLF_CLS.level    <- gl(n = 2, k =3, labels = c("CLF", "CLS"))
     CLF_sphere.level <- gl(n = 2, k =3, labels = c("CLF", "Sphere"))
@@ -210,7 +231,7 @@ testing_choose <- function(eSet, method, parameters, group){
 
 
 the wilcoxon rank-sum test with the parellel computing method boosting
-```{r testing_wilcox}
+```{r _testing_wilcox}
 testing_wilcox <- function(eSet, adj.method="BH"){
   registerDoParallel(cores=4)
   expression <- exprs(eSet)
@@ -237,7 +258,7 @@ testing_wilcox <- function(eSet, adj.method="BH"){
 ## Visualization
 
 
-```{r venndiagram}
+```{r _venndiagram}
 
 area.1 <- length(CLF_CLS.probe)
 area.2 <- length(CLF_sphere.probe)
@@ -263,6 +284,35 @@ draw.triple.venn(area1 = area.list[[1]], area2 = area.list[[2]], area3 = area.li
 ```
 
 
+```{r _table}
+#make table 
+library(knitr)
+library(tibble)
+library(grid)
+library(gtable)
+library(gridExtra)
+png("BAMsummary.png",height = 800,width =1200 )
+bam.summary.table.1<- tmp.data[1:45,]
+bam.summary.table.2<- tmp.data[46:85,]
+table.style <- ttheme_default(base_size = 25, base_colour = "Black",
+                              padding = unit(c(8,8),'mm'),
+                              core=list(fg_params=list(hjust=0, x=0.05)),
+                              rowhead=list(fg_params=list(hjust=0, x=0)),
+                              colhead=list(fg_params=list(col="blue", fontface=4L)))
+bam.summary.table.1<-tableGrob(bam.summary.table.1, rows = NULL,
+                               theme = table.style)
+bam.summary.table.1 <- gtable_add_grob(bam.summary.table.1, grobs = rectGrob(gp = gpar(fill = NA, lwd = 4)),
+                                       t = 1, b = 17,l = 1, r = ncol(bam.summary.table.1))
+bam.summary.table.2<-tableGrob(bam.summary.table.2, rows = NULL,
+                               theme = table.style)
+bam.summary.table.2 <- gtable_add_grob(p.2, grobs = rectGrob(gp = gpar(fill = NA, lwd = 4)),
+                                       t = 1, b = 17,l = 1, r = ncol(bam.summary.table.2))
+bam.table<- combine(bam.summary.table.1, bam.summary.table.2, along=1)
+grid.arrange(bam.table)
+dev.off()
+
+
+```
 
 
 

@@ -654,8 +654,6 @@ ggplot(data= temp, aes(x=Type, y= Name))+geom_tile(aes(fill=Value), colour="blac
 
 # *********************************** -------------------------------------
 
-# Seperate from the Two-side test -----------------------------------------
-
 # QN, Log2, t. test , adjust --------------------------------------------------------------------
 
 tQNlogCLF_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/QNttestCLF_CLS.txt", delim = "\t")
@@ -668,132 +666,6 @@ tQNfilter50logCLF_Sphere <- read_delim("/Users/Weitinglin/Documents/R_scripts/La
 tQNfilter50logCLS_Sphere <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/filter50QNttestCLS_Sphere.txt", delim = "\t")
 
 
-tQNlogCLF_CLS <- tQNlogCLF_CLS %>% rename(CLF=estimate1, CLS=estimate2) %>% mutate(difference = CLF - CLS, status = "no") 
-tQNlogCLF_CLS$status[tQNlogCLF_CLS$difference > 0] <- "UP"
-tQNlogCLF_CLS$status[tQNlogCLF_CLS$difference < 0] <- "DOWN" 
-tQNlogCLF_Sphere <- tQNlogCLF_Sphere %>% rename(CLF=estimate1, Sphere=estimate2) %>% mutate(difference = Sphere - CLF, status = "no") 
-tQNlogCLF_Sphere$status[tQNlogCLF_Sphere$difference > 0] <- "UP"
-tQNlogCLF_Sphere$status[tQNlogCLF_Sphere$difference < 0] <- "DOWN"
-tQNlogCLS_Sphere <- tQNlogCLS_Sphere %>% rename(CLS=estimate1, Sphere=estimate2) %>% mutate(difference = Sphere - CLS, status = "no") 
-tQNlogCLS_Sphere$status[tQNlogCLS_Sphere$difference > 0] <- "UP" 
-tQNlogCLS_Sphere$status[tQNlogCLS_Sphere$difference < 0] <- "DOWN"
-tQNfilter50logCLF_CLS <- tQNfilter50logCLF_CLS %>% rename(CLF=estimate1, CLS=estimate2) %>% mutate(difference = CLF - CLS, status = "no") 
-tQNfilter50logCLF_CLS$status[tQNfilter50logCLF_CLS$difference > 0] <- "UP"
-tQNfilter50logCLF_CLS$status[tQNfilter50logCLF_CLS$difference < 0 ] <- "DOWN"
-tQNfilter50logCLF_Sphere <- tQNfilter50logCLF_Sphere %>% rename(CLF=estimate1, Sphere=estimate2) %>% mutate(difference = Sphere - CLF, status = "no") 
-tQNfilter50logCLF_Sphere$status[tQNfilter50logCLF_Sphere$difference > 0] <- "UP"
-tQNfilter50logCLF_Sphere$status[tQNfilter50logCLF_Sphere$difference < 0] <- "DOWN"
-tQNfilter50logCLS_Sphere <- tQNfilter50logCLS_Sphere %>% rename(CLS=estimate1, Sphere=estimate2) %>% mutate(difference = Sphere - CLS, status = "no") 
-tQNfilter50logCLS_Sphere$status[tQNfilter50logCLS_Sphere$difference > 0] <- "UP"
-tQNfilter50logCLS_Sphere$status[tQNfilter50logCLS_Sphere$difference <0 ] <- "DOWN"
-# Seperate the subset with upregulation and downregulation ----------------
-
-# load the data -----------------------------------------------------------
-
-#for CLS-CLF: No filter
-# _greater ----------------------------------------------------------------
-t.greater.CLF_CLS      <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/upanddownseperatemeasure/greaterQNttestCLF_CLS.txt", delim = "\t")
-t.greater.Sphere_CLF   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/upanddownseperatemeasure/greaterQNttestCLF_Sphere.txt", delim = "\t")
-t.greater.Sphere_CLS   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/upanddownseperatemeasure/greaterQNttestCLS_Sphere.txt", delim = "\t")
-
-# _less -------------------------------------------------------------------
-t.less.CLF_CLS      <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/upanddownseperatemeasure/lessQNttestCLF_CLS.txt", delim="\t")
-t.less.Sphere_CLF   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/upanddownseperatemeasure/lessQNttestCLF_Sphere.txt", delim="\t")
-t.less.Sphere_CLS   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/upanddownseperatemeasure/lessQNttestCLS_Sphere.txt", delim="\t")
-
-
-
-#for CLS-CLF: filter by 0.5
-# _greater ----------------------------------------------------------------
-f.t.greater.CLF_CLS      <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/upanddownseperatemeasure/greaterfilter50QNttestCLF_CLS.txt", delim="\t")
-f.t.greater.Sphere_CLF   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/upanddownseperatemeasure/greaterfilter50QNttestCLF_Sphere.txt", delim="\t")
-f.t.greater.Sphere_CLS   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/upanddownseperatemeasure/greaterfilter50QNttestCLS_Sphere.txt", delim="\t")
-
-# _less -------------------------------------------------------------------
-f.t.less.CLF_CLS      <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/upanddownseperatemeasure/lessfilter50QNttestCLF_CLS.txt", delim="\t")
-f.t.less.Sphere_CLF   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/upanddownseperatemeasure/lessfilter50QNttestCLF_Sphere.txt", delim="\t")
-f.t.less.Sphere_CLS   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/upanddownseperatemeasure/lessfilter50QNttestCLS_Sphere.txt", delim="\t")
-
-# t.test without filter  --------------------------------------------------
-
-# annotated
-total.probe <- t.greater.CLF_CLS$gene
-total.probe.data.frame <- data.frame(Probe = total.probe)
-total.probe.data.frame <- left_join(total.probe.data.frame, probel.relatedTF, by = "Probe")
-# get gene symbom annotation with hgu133plus2.db
-total.probe.data.frame <- total.probe.data.frame %>% mutate(Symbol = getSYMBOL(Probe,"hgu133plus2"))
-# use gprofiler to query the NA value
-# function convertNA_probe use the gprofiler pacakge
-# it's easily to face the proxy error
-for ( i in 1:225){
-start <- 1+ 243*(i-1)
-end <- 243*i
-total.probe.data.frame[start:end,] <- convertNA_probe(total.probe.data.frame[start:end,])
-}
-
-
-# ___UP-regulation -----------------------------------------------------------
-
-
-t.greater.CLF_CLS <- t.greater.CLF_CLS %>% mutate(Case = "t.greater.CLF_CLS")
-t.greater.Sphere_CLF <- t.greater.Sphere_CLF %>% mutate(Case = "t.greater.Sphere_CLF")
-t.greater.Sphere_CLS <- t.greater.Sphere_CLS %>% mutate(Case = "t.greater.Sphere_CLS")
-total.t.greater <- bind_rows(t.greater.CLF_CLS, t.greater.Sphere_CLF, t.greater.Sphere_CLS)
-
-
-# ___DOWN-regulation ---------------------------------------------------------
-t.less.CLF_CLS <- t.less.CLF_CLS %>% mutate(Case = "t.less.CLF_CLS")
-t.less.Sphere_CLF <- t.less.Sphere_CLF %>% mutate(Case = "t.less.Sphere_CLF")
-t.less.Sphere_CLS <- t.less.Sphere_CLS %>% mutate(Case = "t.less.Sphere_CLS")
-total.t.less <- bind_rows(t.less.CLF_CLS, t.less.Sphere_CLF, t.less.Sphere_CLS)
-
-
-
-# t.test with filter ------------------------------------------------------
-
-
-# ___UP-regulation --------------------------------------------------------
-f.t.greater.CLF_CLS <- f.t.greater.CLF_CLS %>% mutate(Case = "f.t.greater.CLF_CLS")
-f.t.greater.Sphere_CLF <- f.t.greater.Sphere_CLF %>% mutate(Case = "f.t.greater.Sphere_CLF")
-f.t.greater.Sphere_CLS <- f.t.greater.Sphere_CLS %>% mutate(Case = "f.t.greater.Sphere_CLS")
-total.f.t.greater <- bind_rows(f.t.greater.CLF_CLS, f.t.greater.Sphere_CLF, f.t.greater.Sphere_CLS)
-
-# ___DOWN-regulation ------------------------------------------------------
-f.t.less.CLF_CLS <- f.t.less.CLF_CLS %>% mutate(Case = "f.t.less.CLF_CLS")
-f.t.less.Sphere_CLF <- f.t.less.Sphere_CLF %>% mutate(Case = "f.t.less.Sphere_CLF") 
-f.t.less.Sphere_CLS <- f.t.less.Sphere_CLS %>% mutate(Case = "f.t.less.Sphere_CLS") 
-total.f.t.less <- bind_rows(f.t.less.CLF_CLS, f.t.less.Sphere_CLF, f.t.less.Sphere_CLS)
-
-
-# group_without_filter ----------------------------------------------------
-total_without_filter <- bind_rows(total.t.greater, total.t.less)
-# group_with_filter -------------------------------------------------------
-total_with_filter    <- bind_rows(total.f.t.greater, total.f.t.less)
-
-
-# Load the Gene Ontology information  ------------------------------------------------------------------
-probel.relatedTF <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/proberelateTF.txt",delim=" ")
-library(readxl)
-cancer_stem_marker <- read_excel("/Users/Weitinglin/Documents/R_scripts/Lab/CSCdbdata/marker_list.xls")
-#57
-cancer_stem_related_marker <- read_excel("/Users/Weitinglin/Documents/R_scripts/Lab/CSCdbdata/annotation.xls")
-#13,308
-study.interest <- c("NANOG","IGF1R","SDF1","POU5F2","POU5F1P3","POU5F1P4","POU5F1B","HGF","POU5F1","IGF2","LIF","TGF","SOX2","THY1","JAK1",
-                    "CXCR4","IGF2","THY-1","ABCG2","ABCG","ABCG1","ALDH1","CD133","SDF2",
-                    "CD44","PROM1","MYC","BMI1","EZH2","KIT","PAR","IGFBP","IGFBP1","IGFBP2","GCSF",
-                    "CHBD","ANGPT","NT","IL3","IL4","IL5","IL7","CCL18","CCL11","FGF2","EPHA1","TGFBR1","TGFBR2","LIFR","SMAD2","YAP1","TCF21")
-Cancer.stem.marker <- unique(cancer_stem_marker$symbol)
-Cancer.stem.related <- unique(cancer_stem_related_marker$symbol)
-
-total.probe <- total.t.greater$gene
-total.probe.data.frame <- data.frame(Probe = total.probe)
-total.probe.data.frame <- left_join(total.probe.data.frame, probel.relatedTF)
-# get gene symbom annotation with hgu133plus2.db
-total.probe.data.frame <- total.probe.data.frame %>% mutate(Gene = getSYMBOL(Probe,"hgu133plus2"))
-
-
-total.probe.data.frame$CSmarker[total.probe.data.frame$Symbol %in% Cancer.stem.marker] <- 1
-total.probe.data.frame$CSrelated[total.probe.data.frame$Symbol %in% Cancer.stem.related] <- 1
 
 
 # use gprofiler to query the NA value
@@ -811,47 +683,119 @@ gconvert("228498_at",
 
 # function depend on gprofiler for transforming the tag
 convertNA_probe <- function(x){
-  n <- dim(x)[[1]]
-  
-  for ( i in 1:n){
-    if (is.na(x[[i,6]])){
-    tmp <-   gconvert(x[[i,1]],
-                      organism = "hsapiens",
-                      target = "AFFY_HG_U133_PLUS_2",
-                      df = T,
-                      numeric_ns = "AFFY_HG_U133_PLUS_2",
-                      mthreshold = 1)
+    n <- dim(x)[[1]]
     
-    if(is.null(tmp$name)){
-      x[[i,6]] <- NA
-    }else{
-      x[[i,6]] <- tmp$name[[1]]
-     }
+    for ( i in 1:n){
+        if (is.na(x[[i,6]])){
+            tmp <-   gconvert(x[[i,1]],
+                              organism = "hsapiens",
+                              target = "AFFY_HG_U133_PLUS_2",
+                              df = T,
+                              numeric_ns = "AFFY_HG_U133_PLUS_2",
+                              mthreshold = 1)
+            
+            if(is.null(tmp$name)){
+                x[[i,6]] <- NA
+            }else{
+                x[[i,6]] <- tmp$name[[1]]
+            }
+        }
     }
-  }
-  return(x)
+    return(x)
 }
 
 # function to annotated the t.test result
 annotate_the_ttest <- function(x){
-  x <- x %>% mutate(Symbol = getSYMBOL(Probe,"hgu133plus2"))
-  
-  
+    x <- x %>% mutate(Symbol = getSYMBOL(Probe,"hgu133plus2"))
+    
+    
 }
 
 # load the gene marker
 
 
 
-# Summary the test result -------------------------------------------------
+
+# Annotation  -------------------------------------------------------------
+# the library dependence
+library(hgu133plus2.db)
+library(readxl)
+library(annotate)
+
+# Load the Gene Ontology information  
+
+probel.relatedTF <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/data/Affymetrix_reference/proberelateTF.txt",delim=" ")
+
+cancer_stem_marker <- read_excel("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/data/CSCdbdata/marker_list.xls")
+#57
+cancer_stem_related_marker <- read_excel("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/data/CSCdbdata/annotation.xls")
+#13,308
+study.interest <- c("NANOG","IGF1R","SDF1","POU5F2","POU5F1P3","POU5F1P4","POU5F1B","HGF","POU5F1","IGF2","LIF","TGF","SOX2","THY1","JAK1",
+                    "CXCR4","IGF2","THY-1","ABCG2","ABCG","ABCG1","ALDH1","CD133","SDF2",
+                    "CD44","PROM1","MYC","BMI1","EZH2","KIT","PAR","IGFBP","IGFBP1","IGFBP2","GCSF",
+                    "CHBD","ANGPT","NT","IL3","IL4","IL5","IL7","CCL18","CCL11","FGF2","EPHA1","TGFBR1","TGFBR2","LIFR","SMAD2","YAP1","TCF21")
+Cancer.stem.marker <- unique(cancer_stem_marker$symbol)
+Cancer.stem.related <- unique(cancer_stem_related_marker$symbol)
+
+total.probe <- total.f.t.greater$Probe
+total.probe.data.frame <- data.frame(Probe = total.probe)
+total.probe.data.frame <- left_join(total.probe.data.frame, probel.relatedTF)
+# get gene symbom annotation with hgu133plus2.db
+total.probe.data.frame <- total.probe.data.frame %>% mutate(Gene = getSYMBOL(Probe,"hgu133plus2"))
+
+
+total.probe.data.frame$CSmarker[total.probe.data.frame$Gene %in% Cancer.stem.marker] <- 1
+total.probe.data.frame$CSrelated[total.probe.data.frame$Gene %in% Cancer.stem.related] <- 1
+
+
+# use gprofiler to query the NA value
+# function convertNA_probe use the gprofiler pacakge
+# it's easily to face the proxy error
+for ( i in 1:225){
+    start <- 1+ 243*(i-1)
+    end <- 243*i
+    total.probe.data.frame[start:end,] <- convertNA_probe(total.probe.data.frame[start:end,])
+}
+
+# QN, Log2, withoutfilter upregulation and downregulation ----------------
+
+#for CLS-CLF: No filter
+# _greater
+
+t.greater.CLF_CLS      <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/greaterQNttestCLF_CLS.txt", delim = "\t")
+t.greater.Sphere_CLF   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/greaterQNttestCLF_Sphere.txt", delim = "\t")
+t.greater.Sphere_CLS   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/greaterQNttestCLS_Sphere.txt", delim = "\t")
+
+# _less 
+t.less.CLF_CLS      <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/lessQNttestCLF_CLS.txt", delim="\t")
+t.less.Sphere_CLF   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/lessQNttestCLF_Sphere.txt", delim="\t")
+t.less.Sphere_CLS   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/lessQNttestCLS_Sphere.txt", delim="\t")
+# UP-regulation 
+
+
+t.greater.CLF_CLS <- t.greater.CLF_CLS %>% mutate(Case = "t.greater.CLF_CLS")
+t.greater.Sphere_CLF <- t.greater.Sphere_CLF %>% mutate(Case = "t.greater.Sphere_CLF")
+t.greater.Sphere_CLS <- t.greater.Sphere_CLS %>% mutate(Case = "t.greater.Sphere_CLS")
+total.t.greater <- bind_rows(t.greater.CLF_CLS, t.greater.Sphere_CLF, t.greater.Sphere_CLS)
+
+
+# DOWN-regulation 
+t.less.CLF_CLS <- t.less.CLF_CLS %>% mutate(Case = "t.less.CLF_CLS")
+t.less.Sphere_CLF <- t.less.Sphere_CLF %>% mutate(Case = "t.less.Sphere_CLF")
+t.less.Sphere_CLS <- t.less.Sphere_CLS %>% mutate(Case = "t.less.Sphere_CLS")
+total.t.less <- bind_rows(t.less.CLF_CLS, t.less.Sphere_CLF, t.less.Sphere_CLS)
+
+# group_without_filter 
+total_without_filter <- bind_rows(total.t.greater, total.t.less)
+
 
 
 # t-test without filter
 # up-regulation
 total.t.greater.table <-  total.t.greater %>% group_by(Case) %>% summarise(n_0.05 = sum(adjusted.p < 0.05, na.rm = TRUE),
-                                                                            n_0.01 = sum(adjusted.p < 0.01, na.rm = TRUE),
-                                                                            n_0.001 = sum(adjusted.p < 0.001, na.rm = TRUE),
-                                                                            n_0.0001 = sum(adjusted.p < 0.0001, na.rm = TRUE))
+                                                                           n_0.01 = sum(adjusted.p < 0.01, na.rm = TRUE),
+                                                                           n_0.001 = sum(adjusted.p < 0.001, na.rm = TRUE),
+                                                                           n_0.0001 = sum(adjusted.p < 0.0001, na.rm = TRUE))
 total.t.greater <- total.t.greater %>% dplyr::rename(Probe = gene)
 total.t.greater.annotate <- left_join(total.t.greater, total.probe.data.frame, by = "Probe")
 total.t.greater.annotate %>% group_by(Case) %>% summarise(n_0.05 = sum(adjusted.p < 0.05, na.rm = TRUE),
@@ -870,13 +814,13 @@ total.t.greater.annotate %>% group_by(Case) %>% summarise(n_0.05 = sum(adjusted.
                                                           n_0.0001_TF = sum(adjusted.p < 0.0001 & !is.na(Total), na.rm = TRUE),
                                                           n_0.0001_CS = sum(adjusted.p < 0.0001 & CSmarker ==1, na.rm = TRUE),
                                                           n_0.0001_CSrelated = sum(adjusted.p < 0.0001 & CSrelated ==1, na.rm = TRUE)) %>%
-         tidyr::unite("n_0.0001",c(14:17),sep = "/") %>%
-         tidyr::unite("n_0.001", c(10:13), sep = "/") %>%
-         tidyr::unite("n_0.01", c(6:9), sep = "/") %>%
-         tidyr::unite("n_0.05", c(2:5), sep = "/") 
+    tidyr::unite("n_0.0001",c(14:17),sep = "/") %>%
+    tidyr::unite("n_0.001", c(10:13), sep = "/") %>%
+    tidyr::unite("n_0.01", c(6:9), sep = "/") %>%
+    tidyr::unite("n_0.05", c(2:5), sep = "/") 
 
 
-  
+
 
 # down-regulation
 total.t.less.table <- total.t.less %>% group_by(Case) %>% summarise(n_0.05 = sum(adjusted.p < 0.05, na.rm = TRUE),
@@ -887,28 +831,143 @@ total.t.less.table <- total.t.less %>% group_by(Case) %>% summarise(n_0.05 = sum
 total.t.less <- total.t.less %>% dplyr::rename(Probe = gene)
 total.t.less.annotate <- left_join(total.t.less, total.probe.data.frame, by = "Probe")
 total.t.less.annotate %>% group_by(Case) %>% summarise(n_0.05 = sum(adjusted.p < 0.05, na.rm = TRUE),
-                                                          n_0.05_TF = sum(adjusted.p < 0.05 & !is.na(Total), na.rm = TRUE),
-                                                          n_0.05_CS = sum(adjusted.p < 0.05 & CSmarker == 1, na.rm = TRUE),
-                                                          n_0.05_CSrelated = sum(adjusted.p < 0.05 & CSrelated == 1, na.rm = TRUE),
-                                                          n_0.01 = sum(adjusted.p < 0.01, na.rm = TRUE),
-                                                          n_0.01_TF = sum(adjusted.p < 0.01 & !is.na(Total), na.rm = TRUE),
-                                                          n_0.01_CS = sum(adjusted.p < 0.01 & CSmarker == 1, na.rm = TRUE),
-                                                          n_0.01_CSrelated = sum(adjusted.p < 0.01 & CSrelated == 1, na.rm = TRUE),
-                                                          n_0.001 = sum(adjusted.p < 0.001, na.rm = TRUE),
-                                                          n_0.001_TF = sum(adjusted.p < 0.001 & !is.na(Total),na.rm = TRUE),
-                                                          n_0.001_CS = sum(adjusted.p < 0.001 & CSmarker == 1, na.rm = TRUE),
-                                                          n_0.001_CSrelated = sum(adjusted.p < 0.001 & CSrelated == 1, na.rm = TRUE),
-                                                          n_0.0001 = sum(adjusted.p < 0.0001, na.rm = TRUE),
-                                                          n_0.0001_TF = sum(adjusted.p < 0.0001 & !is.na(Total), na.rm = TRUE),
-                                                          n_0.0001_CS = sum(adjusted.p < 0.0001 & CSmarker ==1, na.rm = TRUE),
-                                                          n_0.0001_CSrelated = sum(adjusted.p < 0.0001 & CSrelated ==1, na.rm = TRUE)) %>%
-  tidyr::unite("n_0.0001",c(14:17),sep = "/") %>%
-  tidyr::unite("n_0.001", c(10:13), sep = "/") %>%
-  tidyr::unite("n_0.01", c(6:9), sep = "/") %>%
-  tidyr::unite("n_0.05", c(2:5), sep = "/") 
+                                                       n_0.05_TF = sum(adjusted.p < 0.05 & !is.na(Total), na.rm = TRUE),
+                                                       n_0.05_CS = sum(adjusted.p < 0.05 & CSmarker == 1, na.rm = TRUE),
+                                                       n_0.05_CSrelated = sum(adjusted.p < 0.05 & CSrelated == 1, na.rm = TRUE),
+                                                       n_0.01 = sum(adjusted.p < 0.01, na.rm = TRUE),
+                                                       n_0.01_TF = sum(adjusted.p < 0.01 & !is.na(Total), na.rm = TRUE),
+                                                       n_0.01_CS = sum(adjusted.p < 0.01 & CSmarker == 1, na.rm = TRUE),
+                                                       n_0.01_CSrelated = sum(adjusted.p < 0.01 & CSrelated == 1, na.rm = TRUE),
+                                                       n_0.001 = sum(adjusted.p < 0.001, na.rm = TRUE),
+                                                       n_0.001_TF = sum(adjusted.p < 0.001 & !is.na(Total),na.rm = TRUE),
+                                                       n_0.001_CS = sum(adjusted.p < 0.001 & CSmarker == 1, na.rm = TRUE),
+                                                       n_0.001_CSrelated = sum(adjusted.p < 0.001 & CSrelated == 1, na.rm = TRUE),
+                                                       n_0.0001 = sum(adjusted.p < 0.0001, na.rm = TRUE),
+                                                       n_0.0001_TF = sum(adjusted.p < 0.0001 & !is.na(Total), na.rm = TRUE),
+                                                       n_0.0001_CS = sum(adjusted.p < 0.0001 & CSmarker ==1, na.rm = TRUE),
+                                                       n_0.0001_CSrelated = sum(adjusted.p < 0.0001 & CSrelated ==1, na.rm = TRUE)) %>%
+    tidyr::unite("n_0.0001",c(14:17),sep = "/") %>%
+    tidyr::unite("n_0.001", c(10:13), sep = "/") %>%
+    tidyr::unite("n_0.01", c(6:9), sep = "/") %>%
+    tidyr::unite("n_0.05", c(2:5), sep = "/") 
+
+# gprofiler result load
+
+# Without Filter 
+gprofilter.greater.CLF_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestnofilter10_3hierchyfilter/gprofiler_results_upregulation_CLF_CLS.txt", delim = "\t")
+gprofilter.greater.Sphere_CLF <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestnofilter10_3hierchyfilter/gprofiler_results_upregulation_Sphere_CLF.txt", delim = "\t")
+gprofilter.greater.Sphere_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestnofilter10_3hierchyfilter/gprofiler_results_upregulation_Sphere_CLS.txt", delim = "\t")
+
+gprofilter.less.CLF_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestWITHfilter10_3hierchyfilter /gprofiler_results_filter_correct_downregulation_CLF_CLS.txt", delim = "\t")
+gprofilter.less.Sphere_CLF <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestnofilter10_3hierchyfilter/gprofiler_results_downregulation_Sphere_CLF.txt", delim = "\t")
+gprofilter.less.Sphere_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestWITHfilter10_3hierchyfilter /gprofiler_results_filter_downregulation_correct_Sphere_CLS.txt", delim = "\t")
 
 
-# t-test with filter
+gprofilter.greater.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "keg") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilter.greater.CLF_CLS     %>% filter(`t type` == "BP")
+gprofilter.greater.CLF_CLS     %>% filter(`t type` == "CC")
+gprofilter.greater.CLF_CLS     %>% filter(`t type` == "MF")
+gprofilter.greater.CLF_CLS     %>% filter(`t type` == "keg")
+gprofilter.greater.CLF_CLS     %>% filter(`t type` == "hp")
+gprofilter.greater.CLF_CLS     %>% filter(`t type` == "omi")
+gprofilter.greater.CLF_CLS     %>% filter(`t type` == "rea")
+gprofilter.greater.CLF_CLS$`t type` %>% table()
+
+
+gprofilter.greater.Sphere_CLF    %>% filter(`t type` == "BP")
+gprofilter.greater.Sphere_CLF  %>% filter(`t type` == "CC")
+gprofilter.greater.Sphere_CLF  %>% filter(`t type` == "MF")
+gprofilter.greater.Sphere_CLF     %>% filter(`t type` == "keg")
+gprofilter.greater.Sphere_CLF     %>% filter(`t type` == "hp")
+gprofilter.greater.Sphere_CLF     %>% filter(`t type` == "omi")
+gprofilter.greater.Sphere_CLF     %>% filter(`t type` == "rea")
+gprofilter.greater.Sphere_CLF$`t type` %>% table()
+
+gprofilter.greater.Sphere_CLS   %>% filter(`t type` == "BP")
+gprofilter.greater.Sphere_CLS %>% filter(`t type` == "CC")
+gprofilter.greater.Sphere_CLS %>% filter(`t type` == "MF")
+gprofilter.greater.Sphere_CLS     %>% filter(`t type` == "keg")
+gprofilter.greater.Sphere_CLS     %>% filter(`t type` == "hp")
+gprofilter.greater.Sphere_CLS     %>% filter(`t type` == "omi")
+gprofilter.greater.Sphere_CLS     %>% filter(`t type` == "rea")
+gprofilter.greater.Sphere_CLS$`t type` %>% table()
+
+gprofilter.less.CLF_CLS      %>% filter(`t type` == "BP")
+gprofilter.less.CLF_CLS       %>% filter(`t type` == "CC")
+gprofilter.less.CLF_CLS       %>% filter(`t type` == "MF")
+gprofilter.greater.CLF_CLS     %>% filter(`t type` == "keg")
+gprofilter.greater.CLF_CLS     %>% filter(`t type` == "hp")
+gprofilter.greater.CLF_CLS     %>% filter(`t type` == "omi")
+gprofilter.greater.CLF_CLS     %>% filter(`t type` == "rea")
+gprofilter.greater.CLF_CLS$`t type` %>% table()
+
+gprofilter.less.Sphere_CLF    %>% filter(`t type` == "BP")
+gprofilter.less.Sphere_CLF    %>% filter(`t type` == "CC")
+gprofilter.less.Sphere_CLF    %>% filter(`t type` == "MF")
+gprofilter.greater.Sphere_CLF     %>% filter(`t type` == "keg")
+gprofilter.greater.Sphere_CLF     %>% filter(`t type` == "hp")
+gprofilter.greater.Sphere_CLF     %>% filter(`t type` == "omi")
+gprofilter.greater.Sphere_CLF     %>% filter(`t type` == "rea")
+gprofilter.greater.Sphere_CLF$`t type` %>% table()
+
+gprofilter.less.Sphere_CLS    %>% filter(`t type` == "BP")
+gprofilter.less.Sphere_CLS    %>% filter(`t type` == "CC")
+gprofilter.less.Sphere_CLS     %>% filter(`t type` == "MF")
+gprofilter.greater.Sphere_CLS     %>% filter(`t type` == "keg")
+gprofilter.greater.Sphere_CLS     %>% filter(`t type` == "hp")
+gprofilter.greater.Sphere_CLS     %>% filter(`t type` == "omi")
+gprofilter.greater.Sphere_CLS     %>% filter(`t type` == "rea")
+gprofilter.greater.Sphere_CLS$`t type` %>% table()
+
+
+
+
+
+
+#  QN, Log2, with filter 50% upregulation and downregulation ---------------
+
+#for CLS-CLF: filter by 0.5
+# _greater 
+f.t.greater.CLF_CLS      <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/greaterfilter50QNttestCLF_CLS.txt", delim="\t")
+f.t.greater.Sphere_CLF   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/greaterfilter50QNttestCLF_Sphere.txt", delim="\t")
+f.t.greater.Sphere_CLS   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/greaterfilter50QNttestCLS_Sphere.txt", delim="\t")
+
+# _less 
+f.t.less.CLF_CLS      <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/lessfilter50QNttestCLF_CLS.txt", delim="\t")
+f.t.less.Sphere_CLF   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/lessfilter50QNttestCLF_Sphere.txt", delim="\t")
+f.t.less.Sphere_CLS   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/lessfilter50QNttestCLS_Sphere.txt", delim="\t")
+
+
+
+
+# t.test with filter 
+
+
+# UP-regulation 
+f.t.greater.CLF_CLS <- f.t.greater.CLF_CLS %>% mutate(Case = "f.t.greater.CLF_CLS")
+f.t.greater.Sphere_CLF <- f.t.greater.Sphere_CLF %>% mutate(Case = "f.t.greater.Sphere_CLF")
+f.t.greater.Sphere_CLS <- f.t.greater.Sphere_CLS %>% mutate(Case = "f.t.greater.Sphere_CLS")
+total.f.t.greater <- bind_rows(f.t.greater.CLF_CLS, f.t.greater.Sphere_CLF, f.t.greater.Sphere_CLS)
+
+# DOWN-regulation 
+f.t.less.CLF_CLS <- f.t.less.CLF_CLS %>% mutate(Case = "f.t.less.CLF_CLS")
+f.t.less.Sphere_CLF <- f.t.less.Sphere_CLF %>% mutate(Case = "f.t.less.Sphere_CLF") 
+f.t.less.Sphere_CLS <- f.t.less.Sphere_CLS %>% mutate(Case = "f.t.less.Sphere_CLS") 
+total.f.t.less <- bind_rows(f.t.less.CLF_CLS, f.t.less.Sphere_CLF, f.t.less.Sphere_CLS)
+
+
+
+# group_with_filter 
+total_with_filter    <- bind_rows(total.f.t.greater, total.f.t.less)
+
+
+
+
+
+
+
+# Summary the test result 
+
 # up-regulation
 total.f.t.greater.table <-  total.f.t.greater %>% group_by(Case) %>% summarise(n_0.05 = sum(adjusted.p < 0.05, na.rm = TRUE),
                                                                                n_0.01 = sum(adjusted.p < 0.01, na.rm = TRUE),
@@ -1052,39 +1111,7 @@ total.f.t.less.annotate %>% group_by(Case) %>% summarise(n_0.05 = sum(adjusted.p
 
 take_specific_intersect(t.greater.CLF_CLS, t.greater.Sphere_CLF, t.greater.Sphere_CLS, method="adjusted.p", p=0.001, section=6) %>% length()
 
-subset <- total.t.greater %>% filter(Case == "t.greater.CLF_CLS", adjusted.p < 0.001) %>% mutate(symbol = getSYMBOL(gene,"hgu133plus2.db"))
-test <- subset %>% filter(is.na(symbol)) %>% mutate(new = convertNA_probe(gene))
-test$new[test$new == "1"] <- NA
-subset$symbol[is.na(subset$symbol)] <- test$new
-sum(is.na(subset$symbol))
-
-
-
-
-subset  <- total.t.greater %>% filter(Case == "t.greater.Sphere_CLF", adjusted.p < 0.001) %>% mutate(symbol = getSYMBOL(gene,"hgu133plus2.db"))
-test <- subset %>% filter(is.na(symbol)) %>% mutate(new = convertNA_probe(gene))
-test$new[test$new == "1"] <- NA
-subset$symbol[is.na(subset$symbol)] <- test$new
-sum(is.na(subset$symbol))
-subset$symbol[2] <- "PDE4D" #1556331_a_at
-subset$symbol[which(str_detect(subset$gene,"1562608_at"))] <- "BC037932" #1562608_at
-subset$symbol[which(str_detect(subset$gene,"204537_s_at"))] <- "GABRE" #204537_s_at
-subset$symbol[which(str_detect(subset$gene,"222366_at"))] <- "Hs.660247" #222366_at
-subset$symbol[which(str_detect(subset$gene,"227576_at"))] <- "Hs.276976" #227576_at
-subset$symbol[which(str_detect(subset$gene,"234997_x_at"))] <- "ENSG00000259865" 	#234997_x_at
-subset$symbol[which(str_detect(subset$gene,"235138_at"))] <- "Hs.662054" #235138_at
-
-
-
-
-subset  <- total.t.greater %>% filter(Case == "t.greater.Sphere_CLS", adjusted.p < 0.003) %>% mutate(symbol = getSYMBOL(gene,"hgu133plus2.db"))
-test <- subset %>% filter(is.na(symbol)) %>% mutate(new = convertNA_probe(gene))
-test$new[test$new == "1"] <- NA
-subset$symbol[is.na(subset$symbol)] <- test$new
-sum(is.na(subset$symbol))
-
 # down-regulation
-
 
 take_specific_intersect(t.greater.CLF_CLS, t.greater.Sphere_CLF, t.greater.Sphere_CLS, method="adjusted.p", p=0.001, section=6) %>% length()
 
@@ -1175,73 +1202,6 @@ system("say finished")
 
 # 
 
-# Load the g profilter result ---------------------------------------------
-
-# Without Filter ----------------------------------------------------------
-gprofilter.greater.CLF_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestnofilter10_3hierchyfilter/gprofiler_results_upregulation_CLF_CLS.txt", delim = "\t")
-gprofilter.greater.Sphere_CLF <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestnofilter10_3hierchyfilter/gprofiler_results_upregulation_Sphere_CLF.txt", delim = "\t")
-gprofilter.greater.Sphere_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestnofilter10_3hierchyfilter/gprofiler_results_upregulation_Sphere_CLS.txt", delim = "\t")
-
-gprofilter.less.CLF_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestWITHfilter10_3hierchyfilter /gprofiler_results_filter_correct_downregulation_CLF_CLS.txt", delim = "\t")
-gprofilter.less.Sphere_CLF <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestnofilter10_3hierchyfilter/gprofiler_results_downregulation_Sphere_CLF.txt", delim = "\t")
-gprofilter.less.Sphere_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestWITHfilter10_3hierchyfilter /gprofiler_results_filter_downregulation_correct_Sphere_CLS.txt", delim = "\t")
-
-
-gprofilter.greater.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "keg") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilter.greater.CLF_CLS     %>% filter(`t type` == "BP")
-gprofilter.greater.CLF_CLS     %>% filter(`t type` == "CC")
-gprofilter.greater.CLF_CLS     %>% filter(`t type` == "MF")
-gprofilter.greater.CLF_CLS     %>% filter(`t type` == "keg")
-gprofilter.greater.CLF_CLS     %>% filter(`t type` == "hp")
-gprofilter.greater.CLF_CLS     %>% filter(`t type` == "omi")
-gprofilter.greater.CLF_CLS     %>% filter(`t type` == "rea")
-gprofilter.greater.CLF_CLS$`t type` %>% table()
-
-
-gprofilter.greater.Sphere_CLF    %>% filter(`t type` == "BP")
-gprofilter.greater.Sphere_CLF  %>% filter(`t type` == "CC")
-gprofilter.greater.Sphere_CLF  %>% filter(`t type` == "MF")
-gprofilter.greater.Sphere_CLF     %>% filter(`t type` == "keg")
-gprofilter.greater.Sphere_CLF     %>% filter(`t type` == "hp")
-gprofilter.greater.Sphere_CLF     %>% filter(`t type` == "omi")
-gprofilter.greater.Sphere_CLF     %>% filter(`t type` == "rea")
-gprofilter.greater.Sphere_CLF$`t type` %>% table()
-
-gprofilter.greater.Sphere_CLS   %>% filter(`t type` == "BP")
-gprofilter.greater.Sphere_CLS %>% filter(`t type` == "CC")
-gprofilter.greater.Sphere_CLS %>% filter(`t type` == "MF")
-gprofilter.greater.Sphere_CLS     %>% filter(`t type` == "keg")
-gprofilter.greater.Sphere_CLS     %>% filter(`t type` == "hp")
-gprofilter.greater.Sphere_CLS     %>% filter(`t type` == "omi")
-gprofilter.greater.Sphere_CLS     %>% filter(`t type` == "rea")
-gprofilter.greater.Sphere_CLS$`t type` %>% table()
-
-gprofilter.less.CLF_CLS      %>% filter(`t type` == "BP")
-gprofilter.less.CLF_CLS       %>% filter(`t type` == "CC")
-gprofilter.less.CLF_CLS       %>% filter(`t type` == "MF")
-gprofilter.greater.CLF_CLS     %>% filter(`t type` == "keg")
-gprofilter.greater.CLF_CLS     %>% filter(`t type` == "hp")
-gprofilter.greater.CLF_CLS     %>% filter(`t type` == "omi")
-gprofilter.greater.CLF_CLS     %>% filter(`t type` == "rea")
-gprofilter.greater.CLF_CLS$`t type` %>% table()
-
-gprofilter.less.Sphere_CLF    %>% filter(`t type` == "BP")
-gprofilter.less.Sphere_CLF    %>% filter(`t type` == "CC")
-gprofilter.less.Sphere_CLF    %>% filter(`t type` == "MF")
-gprofilter.greater.Sphere_CLF     %>% filter(`t type` == "keg")
-gprofilter.greater.Sphere_CLF     %>% filter(`t type` == "hp")
-gprofilter.greater.Sphere_CLF     %>% filter(`t type` == "omi")
-gprofilter.greater.Sphere_CLF     %>% filter(`t type` == "rea")
-gprofilter.greater.Sphere_CLF$`t type` %>% table()
-
-gprofilter.less.Sphere_CLS    %>% filter(`t type` == "BP")
-gprofilter.less.Sphere_CLS    %>% filter(`t type` == "CC")
-gprofilter.less.Sphere_CLS     %>% filter(`t type` == "MF")
-gprofilter.greater.Sphere_CLS     %>% filter(`t type` == "keg")
-gprofilter.greater.Sphere_CLS     %>% filter(`t type` == "hp")
-gprofilter.greater.Sphere_CLS     %>% filter(`t type` == "omi")
-gprofilter.greater.Sphere_CLS     %>% filter(`t type` == "rea")
-gprofilter.greater.Sphere_CLS$`t type` %>% table()
 
 # Filter ------------------------------------------------------------------
 gprofilterfilter.greater.CLF_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestWITHfilter10_3hierchyfilter /gprofiler_results_filter_upregulation_CLF_CLS.txt", delim = "\t")
@@ -1312,264 +1272,6 @@ total_with_filter.table <- total_with_filter %>% group_by(Case) %>% summarise(n_
                                                    n_0.01 = sum(adjusted.p < 0.01, na.rm = TRUE),
                                                    n_0.001 = sum(adjusted.p < 0.001, na.rm = TRUE),
                                                    n_0.0001 = sum(adjusted.p < 0.0001, na.rm = TRUE))
-
-
-# _different p value -------------------------------------------------------
-
-take_specific_intersect(t.greater.CLF_CLS, t.greater.Sphere_CLF, t.greater.Sphere_CLS, method="adjusted.p", p=0.001, section=6) %>% length()
-
-# _intersection ------------------------------------------------------------
-
-# dissect the venndiagram
-take_specific_intersect <- function(CLF_CLS, CLF_Sphere, CLS_Sphere, method="adjusted.p", p=0.05, section){
-  if ( method == "adjusted.p"){
-    CLF_CLS.probe    <- (CLF_CLS %>% filter(adjusted.p < p))$gene
-    CLF_Sphere.probe <- (CLF_Sphere %>% filter(adjusted.p < p))$gene
-    CLS_Sphere.probe <- (CLS_Sphere %>% filter(adjusted.p < p))$gene
-    }
-  else if ( method == "p.value"){
-    CLF_CLS.probe    <- (CLF_CLS %>% filter(p.value < p))$gene
-    CLF_Sphere.probe <- (CLF_Sphere %>% filter(p.value < p))$gene
-    CLS_Sphere.probe <- (CLS_Sphere %>% filter(p.value < p))$gene
-    }
-  area.1    <- CLF_CLS.probe     #1
-  area.2    <- CLF_Sphere.probe  #2
-  area.3    <- CLS_Sphere.probe  #3
-  area.12   <- intersect(CLF_CLS.probe, CLF_Sphere.probe)   #4
-  area.23   <- intersect(CLF_Sphere.probe,CLS_Sphere.probe) #5
-  area.13   <- intersect(CLF_CLS.probe, CLS_Sphere.probe)   #6
-  area.123  <- intersect(intersect(CLF_CLS.probe, CLF_Sphere.probe),CLS_Sphere.probe) #7
-  area.13_2 <- setdiff(area.13,area.2) #8
-  area.list <- list(area.1, area.2, area.3, area.12, area.23, area.13, area.123, area.13_2) 
-  return(area.list[[section]])
-}
-
-
-
-# _Plot_venn ---------------------------------------------------------------
-# t.greater.CLF_CLS
-# t.greater.Sphere_CLF
-# t.greater.Sphere_CLS
-# t.less.CLF_CLS
-# t.less.Sphere_CLF
-# t.less.Sphere_CLS
-# f.t.greater.CLF_CLS
-# f.t.greater.Sphere_CLF
-# f.t.greater.Sphere_CLS
-# f.t.less.CLF_CLS
-# f.t.less.Sphere_CLF
-# f.t.less.Sphere_CLS
-
-
-take_specific_intersect(t.greater.CLF_CLS, t.greater.Sphere_CLF, t.greater.Sphere_CLS, method="adjusted.p", p=0.05, section=8)
-
-
-library(VennDiagram)
-draw.triple.venn(area1 = area.list[[1]], area2 = area.list[[2]], area3 = area.list[[3]], n12 = area.list[[4]], n23 = area.list[[5]], n13 = area.list[[6]],
-                 n123 = area.list[[7]], category = c("p =0.05", "p = 0.01", "p = 0.001"), lty = "blank",
-                 fill = c("skyblue", "pink1", "mediumorchid"))
-
-
-
-# Analysis the CLF_CLS ----------------------------------------------------
-ensembl       <- useMart(biomart = "ENSEMBL_MART_ENSEMBL",
-                         host = "dec2013.archive.ensembl.org",
-                         dataset = "hsapiens_gene_ensembl")
-
-
-# function depend on biomart
-annotate_na <- function(x){
-  n <- length(x)
-  for (i in 1:n){
-    if (is.na(x[i])){
-      result <- getBM(attributes = c("ensembl_gene_id","external_gene_id"),
-                      filters = "affy_hg_u133_plus_2",
-                      values = names(x[i]), ensembl)
-      x[i] <- result[1,2]
-    }
-  }
-  return(x)
-}
-
-# function depend on gprofiler for transforming the tag
-convertNA_probe <- function(x){
-  for ( i in 1:length(x)){
-    tmp <-   gconvert(x[[i]],
-             organism = "hsapiens",
-             target = "AFFY_HG_U133_PLUS_2",
-             df = T,
-             numeric_ns = "AFFY_HG_U133_PLUS_2",
-            mthreshold = 1)
-    
-    if(is.null(tmp$name)){
-      x[[i]] <- NA
-    }else{
-    x[[i]] <- tmp$name
-     }
-  }
-  return(x)
-}
-
-tmp <-   gconvert("1553993_s_at",
-                  organism = "hsapiens",
-                  target = "AFFY_HG_U133_PLUS_2",
-                  df = T,
-                  numeric_ns = "AFFY_HG_U133_PLUS_2",
-                  mthreshold = 1)
-
-gconvert("1553993_s_at",
-         organism = "hsapiens",
-         target = "AFFY_HG_U133_PLUS_2",
-         df = T,
-         numeric_ns = "AFFY_HG_U133_PLUS_2",
-         mthreshold = 1)
-
-
-#Begine
-CLF_CLS.test <- t.greater.CLF_CLS %>% filter(adjusted.p < 0.001)
-#
-library(hgu133a.db)
-library(hgu133b.db)
-background.gene.list
-#use 
-# _UP ---------------------------------------------------------------------
-CLF_CLS.test <- CLF_CLS.test %>% select()
-CLF_CLS.test.gene <- getSYMBOL(CLF_CLS.test$gene, "hgu133plus2")
-#要知道這邊annotate多少個na
-CLF_CLS.test.gene <- annotate_na(CLF_CLS.test.gene)
-#還有多少個na值  
-na.CLF_CLS.test.gene  <- CLF_CLS.test.gene[is.na(CLF_CLS.test.gene)]
-CLF_CLS.test.gene <- CLF_CLS.test.gene[!is.na(CLF_CLS.test.gene)]
-#找重複的
-dup.CLF_CLS.test.gene <-CLF_CLS.test.gene[duplicated(CLF_CLS.test.gene)]
-CLF_CLS.test.gene     <-CLF_CLS.test.gene[!duplicated(CLF_CLS.test.gene)]
-
-CLF_CLS.test.gene <- CLF_CLS.test.gene %>% unname() 
-CLF_CLS.test.gene <- CLF_CLS.test.gene[!is.na(CLF_CLS.test.gene)]
-CLF_CLS.test.gene <- CLF_CLS.test.gene[!duplicated(CLF_CLS.test.gene)]
-
-background.gene.list <- t.greater.CLF_CLS$gene
-background.gene.list <- getSYMBOL(background.gene.list, "hgu133plus2")
-background.gene.list %>% is.na() %>% sum()
-#12329
-background.gene.list <- annotate_na(background.gene.list)
-#g:goprifiler
-gconvert("1007_s_at",
-         organism = "hsapiens",
-         target = "AFFY_HG_U133_PLUS_2",
-         df = T,
-         numeric_ns = "AFFY_HG_U133_PLUS_2",
-         mthreshold = 1)
-
-result <- gprofiler(unname(CLF_CLS.test.gene),
-          organism = "hsapiens",
-          ordered_query = F,
-          significant = T,
-          exclude_iea = T,
-          underrep = F,
-          evcodes = F,
-          region_query =F,
-          max_p_value = 1,
-          min_set_size = 0,
-          max_set_size = 0,
-          min_isect_size = 0,
-          correction_method = "analytical",
-          hier_filtering = "none",
-          domain_size = "annotated",
-          custom_bg = "AFFY_HG_U133_PLUS_2",
-          numeric_ns = "",
-          png_fn = NULL,
-          include_graph = F,
-          src_filter = NULL)
-
-result <- gprofiler(unname(CLF_CLS.test.gene),
-                    organism = "hsapiens",
-                    ordered_query = F,
-                    significant = T,
-                    exclude_iea = T,
-                    underrep = F,
-                    evcodes = F,
-                    region_query =F,
-                    max_p_value = 1,
-                    min_set_size = 0,
-                    max_set_size = 0,
-                    min_isect_size = 0,
-                    correction_method = "analytical",
-                    hier_filtering = "none",
-                    domain_size = "annotated",
-                    custom_bg = background.gen,
-                    numeric_ns = "",
-                    png_fn = NULL,
-                    include_graph = F,
-                    src_filter = NULL)
-
-gprofiler(c("Klf4", "Pax5", "Sox2", "Nanog"),
-          organism = "hsapiens",
-          ordered_query = F,
-          custom_bg = background.gene.list)
-
-
-CLF_CLS.test.gene.function <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestnofilter10_3greater/gprofiler_results_1080768988981.txt",
-                                         delim = "\t")
-CLF_CLS.test.gene.function <- CLF_CLS.test.gene.function[-1,-c(1:2)]
-
-CLF_CLS.test.gene.function$`t type` %>% table()
-
-BP <- CLF_CLS.test.gene.function %>% filter(`t type` == "BP")   
-CC <- CLF_CLS.test.gene.function %>% filter(`t type` == "CC")  
-MF <- CLF_CLS.test.gene.function %>% filter(`t type` == "MF")  
-
-
-# _MF ---------------------------------------------------------------------
-MF %>% dplyr::select(-`Q&T`, -`Q&T/Q`, -`Q&T/T`) %>%  arrange(`t depth`,`p-value`)
-table(MF$`t depth`)
-# 9 10 2
-#begin from the lower level
-MF %>% filter(`t depth`==3)
-GOMFPARENTS$"GO:0070851"  #growth factor receptor binding 
-# is_a 
-# "GO:0005102"    
-GOMFPARENTS$"GO:0042803"  #protein homodimerization activity 
-# is_a         is_a 
-# "GO:0042802" "GO:0046983" 
-MF %>% filter(`t depth`==2, `term ID` %in% c("GO:0005102", "GO:0042802","GO:0046983"))
-
-edge <- c()
-
-for ( i in (MF %>% filter(`t depth`==2))$`term ID`){
-     edge <- c(paste(i,"-",GOMFPARENTS[[i]],sep=""),edge)
-}
-result <- ""
-for (i in edge){
-   result <- paste(i,result,sep=",")
-}
-node_1 <- c()
-for ( i in (MF %>% filter(`t depth`==2))$`term ID`){
-  node_1 <- c(GOMFPARENTS[[i]], node_1)
-}
-node_1 <- node_1 %>% unname()
-node_1 <- node_1[!duplicated(node_1)]
-#visualization
-library(igraph)
-g <- graph.formula(1-2, 1-3, 2-3, 2-4, 3-5, 4-5, 4-6,4-7, 5-6, 6-7,10-11,11-12)
-g <- graph.formula("GO:0005102" -"GO:0070851","GO:0042802"-"GO:0042803", "GO:0046983" -"GO:0042803",
-                   "GO:0042802"-"GO:0005515","GO:0019899"-"GO:0005515","GO:0005102"-"GO:0005515","GO:0019838"-"GO:0005515",
-                   "GO:0039706"-"GO:0005515","GO:0046983"-"GO:0005515","GO:0050839"-"GO:0005515","GO:0032403"-"GO:0044877",
-                   "GO:0032403"-"GO:0005515","GO:0051015"-"GO:0032403","GO:0051015"-"GO:0003779","GO:0004601"-"GO:0016684",
-                   "GO:0004601"-"GO:001620",
-                   "GO:0008449", "GO:0004720", "GO:0050431", "GO:0010314", "GO:0005201",
-                   "MF"-"GO:0008449","MF"-"GO:0004720","MF"-"GO:0005515","MF"-"GO:0044877",
-                   "MF"-"GO:0003779","MF"-"GO:0050431","MF"-"GO:0010314","MF"-"GO:0016684","MF"-"GO:0005201")
-node_1.only <- (MF %>% filter(`t depth`==1, !`term ID` %in% node_1))$`term ID`
-node_1.all  <- (MF %>% filter(`t depth`==1))$`term ID`
-for (i in 1:length(node_1.all)){
-  node_1.all[[i]] <- paste('"MF"-"', node_1.all[[i]], '"', sep="")
-}
-
-plot(g)
-# _DOWN ------------------------------------------------------------------- 
-CLF_CLS.test.less <- t.less.CLF_CLS %>% filter(adjusted.p < 0.001)
-
 
 
 
