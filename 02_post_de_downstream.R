@@ -711,51 +711,10 @@ annotate_the_ttest <- function(x){
     
 }
 
-# load the gene marker
 
 
+# ******************************** ----------------------------------------
 
-
-# Annotation  -------------------------------------------------------------
-# the library dependence
-library(hgu133plus2.db)
-library(readxl)
-library(annotate)
-
-# Load the Gene Ontology information  
-
-probel.relatedTF <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/data/Affymetrix_reference/proberelateTF.txt",delim=" ")
-
-cancer_stem_marker <- read_excel("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/data/CSCdbdata/marker_list.xls")
-#57
-cancer_stem_related_marker <- read_excel("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/data/CSCdbdata/annotation.xls")
-#13,308
-study.interest <- c("NANOG","IGF1R","SDF1","POU5F2","POU5F1P3","POU5F1P4","POU5F1B","HGF","POU5F1","IGF2","LIF","TGF","SOX2","THY1","JAK1",
-                    "CXCR4","IGF2","THY-1","ABCG2","ABCG","ABCG1","ALDH1","CD133","SDF2",
-                    "CD44","PROM1","MYC","BMI1","EZH2","KIT","PAR","IGFBP","IGFBP1","IGFBP2","GCSF",
-                    "CHBD","ANGPT","NT","IL3","IL4","IL5","IL7","CCL18","CCL11","FGF2","EPHA1","TGFBR1","TGFBR2","LIFR","SMAD2","YAP1","TCF21")
-Cancer.stem.marker <- unique(cancer_stem_marker$symbol)
-Cancer.stem.related <- unique(cancer_stem_related_marker$symbol)
-
-total.probe <- total.f.t.greater$Probe
-total.probe.data.frame <- data.frame(Probe = total.probe)
-total.probe.data.frame <- left_join(total.probe.data.frame, probel.relatedTF)
-# get gene symbom annotation with hgu133plus2.db
-total.probe.data.frame <- total.probe.data.frame %>% mutate(Gene = getSYMBOL(Probe,"hgu133plus2"))
-
-
-total.probe.data.frame$CSmarker[total.probe.data.frame$Gene %in% Cancer.stem.marker] <- 1
-total.probe.data.frame$CSrelated[total.probe.data.frame$Gene %in% Cancer.stem.related] <- 1
-
-
-# use gprofiler to query the NA value
-# function convertNA_probe use the gprofiler pacakge
-# it's easily to face the proxy error
-for ( i in 1:225){
-    start <- 1+ 243*(i-1)
-    end <- 243*i
-    total.probe.data.frame[start:end,] <- convertNA_probe(total.probe.data.frame[start:end,])
-}
 
 # QN, Log2, withoutfilter upregulation and downregulation ----------------
 
@@ -852,6 +811,30 @@ total.t.less.annotate %>% group_by(Case) %>% summarise(n_0.05 = sum(adjusted.p <
     tidyr::unite("n_0.05", c(2:5), sep = "/") 
 
 # gprofiler result load
+# output the genesybol for the gprofiler 
+subset <- total.t.less %>% filter(Case == "t.less.CLF_CLS", adjusted.p < 0.001 )   %>% mutate(symbol = getSYMBOL(gene,"hgu133plus2.db"))
+test <- subset %>% filter(is.na(symbol)) %>% mutate(new = convertNA_probe(gene)) 
+test$new[test$new == "1"] <- NA
+subset$symbol[is.na(subset$symbol)] <- test$new
+sum(is.na(subset$symbol))
+
+subset <- total.t.less %>% filter(Case == "t.less.Sphere_CLF", adjusted.p < 0.001)  %>% mutate(symbol = getSYMBOL(gene,"hgu133plus2.db"))
+test <- subset %>% filter(is.na(symbol)) %>% mutate(new = convertNA_probe(gene))
+test$new[test$new == "1"] <- NA
+subset$symbol[is.na(subset$symbol)] <- test$new
+sum(is.na(subset$symbol))
+subset$symbol[!is.na(subset$symbol)] %>% cat
+
+subset <- total.t.less %>% filter(Case == "t.less.Sphere_CLS", adjusted.p < 0.003)  %>% mutate(symbol = getSYMBOL(gene,"hgu133plus2.db"))
+test <- subset %>% filter(is.na(symbol)) %>% mutate(new = convertNA_probe(gene))
+test$new[test$new == "1"] <- NA
+subset$symbol[is.na(subset$symbol)] <- test$new
+sum(is.na(subset$symbol))
+subset$symbol[!is.na(subset$symbol)] %>% cat
+system("say finished")
+
+
+
 
 # Without Filter 
 gprofilter.greater.CLF_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestnofilter10_3hierchyfilter/gprofiler_results_upregulation_CLF_CLS.txt", delim = "\t")
@@ -921,7 +904,13 @@ gprofilter.greater.Sphere_CLS$`t type` %>% table()
 
 
 
+down.CLF_CLS.nofilter    <- (total.t.less.annotate %>% filter(Case == "t.less.CLF_CLS" & adjusted.p < 0.001  ))$Probe %>% unique
+down.Sphere_CLS.nofilter <- (total.t.less.annotate %>% filter(Case == "t.less.Sphere_CLS" & adjusted.p < 0.001 ))$Probe %>% unique
 
+area.1 <- length(down.CLF_CLS )
+area.2 <- length(down.Sphere_CLS)
+area.12 <- length(intersect(down.CLF_CLS, down.Sphere_CLS))
+area.list <- list(area.1, area.2, area.12)
 
 
 #  QN, Log2, with filter 50% upregulation and downregulation ---------------
@@ -948,6 +937,7 @@ f.t.greater.CLF_CLS <- f.t.greater.CLF_CLS %>% mutate(Case = "f.t.greater.CLF_CL
 f.t.greater.Sphere_CLF <- f.t.greater.Sphere_CLF %>% mutate(Case = "f.t.greater.Sphere_CLF")
 f.t.greater.Sphere_CLS <- f.t.greater.Sphere_CLS %>% mutate(Case = "f.t.greater.Sphere_CLS")
 total.f.t.greater <- bind_rows(f.t.greater.CLF_CLS, f.t.greater.Sphere_CLF, f.t.greater.Sphere_CLS)
+
 
 # DOWN-regulation 
 f.t.less.CLF_CLS <- f.t.less.CLF_CLS %>% mutate(Case = "f.t.less.CLF_CLS")
@@ -997,6 +987,196 @@ total.f.t.greater.annotate %>% group_by(Case) %>% summarise(n_0.05 = sum(adjuste
   tidyr::unite("n_0.001", c(10:13), sep = "/") %>%
   tidyr::unite("n_0.01", c(6:9), sep = "/") %>%
   tidyr::unite("n_0.05", c(2:5), sep = "/") 
+
+
+# down-regulation
+total.f.t.less.table <- total.f.t.less %>% group_by(Case) %>% summarise(n_0.05 = sum(adjusted.p < 0.05, na.rm = TRUE),
+                                                                        n_0.01 = sum(adjusted.p < 0.01, na.rm = TRUE),
+                                                                        n_0.001 = sum(adjusted.p < 0.001, na.rm = TRUE),
+                                                                        n_0.0001 = sum(adjusted.p < 0.0001, na.rm = TRUE))
+total.f.t.less <- total.f.t.less %>% dplyr::rename(Probe = gene)
+total.f.t.less.annotate <- left_join(total.f.t.less, total.probe.data.frame, by = "Probe")
+total.f.t.less.annotate %>% group_by(Case) %>% summarise(n_0.05 = sum(adjusted.p < 0.05, na.rm = TRUE),
+                                                       n_0.05_TF = sum(adjusted.p < 0.05 & !is.na(Total), na.rm = TRUE),
+                                                       n_0.05_CS = sum(adjusted.p < 0.05 & CSmarker == 1, na.rm = TRUE),
+                                                       n_0.05_CSrelated = sum(adjusted.p < 0.05 & CSrelated == 1, na.rm = TRUE),
+                                                       n_0.01 = sum(adjusted.p < 0.01, na.rm = TRUE),
+                                                       n_0.01_TF = sum(adjusted.p < 0.01 & !is.na(Total), na.rm = TRUE),
+                                                       n_0.01_CS = sum(adjusted.p < 0.01 & CSmarker == 1, na.rm = TRUE),
+                                                       n_0.01_CSrelated = sum(adjusted.p < 0.01 & CSrelated == 1, na.rm = TRUE),
+                                                       n_0.001 = sum(adjusted.p < 0.001, na.rm = TRUE),
+                                                       n_0.001_TF = sum(adjusted.p < 0.001 & !is.na(Total),na.rm = TRUE),
+                                                       n_0.001_CS = sum(adjusted.p < 0.001 & CSmarker == 1, na.rm = TRUE),
+                                                       n_0.001_CSrelated = sum(adjusted.p < 0.001 & CSrelated == 1, na.rm = TRUE),
+                                                       n_0.0001 = sum(adjusted.p < 0.0001, na.rm = TRUE),
+                                                       n_0.0001_TF = sum(adjusted.p < 0.0001 & !is.na(Total), na.rm = TRUE),
+                                                       n_0.0001_CS = sum(adjusted.p < 0.0001 & CSmarker ==1, na.rm = TRUE),
+                                                       n_0.0001_CSrelated = sum(adjusted.p < 0.0001 & CSrelated ==1, na.rm = TRUE)) %>%
+  tidyr::unite("n_0.0001",c(14:17),sep = "/") %>%
+  tidyr::unite("n_0.001", c(10:13), sep = "/") %>%
+  tidyr::unite("n_0.01", c(6:9), sep = "/") %>%
+  tidyr::unite("n_0.05", c(2:5), sep = "/") 
+
+
+
+
+
+
+
+# t-test with filter
+# up-regulation
+
+
+# output the genesybol for the gprofiler 
+subset <- total.f.t.greater %>% filter(Case == "f.t.greater.CLF_CLS", adjusted.p < 0.001 )   %>% mutate(symbol = getSYMBOL(Probe,"hgu133plus2.db"))
+test <- subset %>% filter(is.na(symbol)) %>% mutate(new = convertNA_probe(gene))
+test$new[test$new == "1"] <- NA
+subset$symbol[is.na(subset$symbol)] <- test$new
+sum(is.na(subset$symbol))
+subset$symbol[!is.na(subset$symbol)] %>% cat
+system("say finished")
+
+
+subset <- total.f.t.greater %>% filter(Case == "f.t.greater.Sphere_CLF", adjusted.p < 0.001 )   %>% mutate(symbol = getSYMBOL(gene,"hgu133plus2.db"))
+test <- subset %>% filter(is.na(symbol)) %>% mutate(new = convertNA_probe(gene))
+test$new[test$new == "1"] <- NA
+subset$symbol[is.na(subset$symbol)] <- test$new
+sum(is.na(subset$symbol))
+subset$symbol[!is.na(subset$symbol)] %>% cat
+system("say finished")
+
+
+subset <- total.f.t.greater %>% filter(Case == "f.t.greater.Sphere_CLS", adjusted.p < 0.001 )   %>% mutate(symbol = getSYMBOL(gene,"hgu133plus2.db"))
+test <- subset %>% filter(is.na(symbol)) %>% mutate(new = convertNA_probe(gene))
+test$new[test$new == "1"] <- NA
+subset$symbol[is.na(subset$symbol)] <- test$new
+sum(is.na(subset$symbol))
+subset$symbol[!is.na(subset$symbol)] %>% cat
+system("say finished")
+
+subset <- total.f.t.greater %>% filter(Case == "f.t.greater.CLF_CLS", adjusted.p < 0.001 ) 
+
+
+
+# down-regulation
+library(gProfileR)
+hgu133plus2.probe.list <- rownames(ecelfile.set)
+probe <- subset$Probe
+result<- gprofiler(query = probe,
+          organism = "hsapiens",
+          ordered_query = T,
+          max_set_size = 1000,
+          min_isect_size = 0,
+          significant = T,
+          exclude_iea = T,
+          underrep = T,
+          correction_method = "fdr",
+          hier_filtering = "moderate",
+          custom_bg = hgu133plus2.probe)
+
+
+# output the genesybol for the gprofiler 
+subset <- total.f.t.less %>% filter(Case == "f.t.less.CLF_CLS", adjusted.p < 0.001 )   %>% mutate(symbol = getSYMBOL(Probe,"hgu133plus2.db"))
+test <- subset %>% filter(is.na(symbol)) %>% mutate(new = convertNA_probe(gene))
+test$new[test$new == "1"] <- NA
+subset$symbol[is.na(subset$symbol)] <- test$new
+sum(is.na(subset$symbol))
+subset$symbol[!is.na(subset$symbol)] %>% cat
+subset$Probe %>% cat
+system("say finished")
+
+
+subset <- total.f.t.less %>% filter(Case == "f.t.less.Sphere_CLF", adjusted.p < 0.001 )   %>% mutate(symbol = getSYMBOL(gene,"hgu133plus2.db"))
+test <- subset %>% filter(is.na(symbol)) %>% mutate(new = convertNA_probe(gene))
+test$new[test$new == "1"] <- NA
+subset$symbol[is.na(subset$symbol)] <- test$new
+sum(is.na(subset$symbol))
+subset$symbol[!is.na(subset$symbol)] %>% cat
+system("say finished")
+
+
+subset <- total.f.t.less %>% filter(Case == "f.t.less.Sphere_CLS", adjusted.p < 0.001 )   %>% mutate(symbol = getSYMBOL(Probe,"hgu133plus2.db"))
+
+test <- subset %>% filter(is.na(symbol)) %>% mutate(new = convertNA_probe(gene))
+test$new[test$new == "1"] <- NA
+subset$symbol[is.na(subset$symbol)] <- test$new
+sum(is.na(subset$symbol))
+subset$symbol[!is.na(subset$symbol)] %>% unique%>% cat
+system("say finished")
+
+# 
+
+
+# Filter ------------------------------------------------------------------
+gprofilterfilter.greater.CLF_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestWITHfilter10_3hierchyfilter /gprofiler_results_filter_upregulation_CLF_CLS.txt", delim = "\t")
+gprofilterfilter.greater.Sphere_CLF <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestWITHfilter10_3hierchyfilter /gprofiler_results_filter_upregulation_Sphere_CLF.txt", delim = "\t")
+gprofilterfilter.greater.Sphere_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestWITHfilter10_3hierchyfilter /gprofiler_results_filter_003_greater_Sphere_CLS.txt", delim = "\t")
+gprofilterfilter.less.CLF_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/lessfilter50QNttestCLF_CLS.txt", delim = "\t")
+gprofilterfilter.less.Sphere_CLF <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/lessfilter50QNttestCLF_Sphere.txt", delim = "\t")
+gprofilterfilter.less.Sphere_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/lessfilter50QNttestCLS_Sphere.txt", delim = "\t")
+
+gprofilterfilter.less.CLF_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestfilter/gprofiler_results_201612filter_CLF_CLS_greater.txt", delim="\t")
+
+
+gprofilterfilter.greater.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "BP") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.greater.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "MF") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.greater.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "CC") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.greater.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "rea") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.greater.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "keg") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+
+gprofilterfilter.greater.Sphere_CLF[,-c(1,2)]   %>% filter(`t type` == "BP") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.greater.Sphere_CLF[,-c(1,2)]   %>% filter(`t type` == "MF") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.greater.Sphere_CLF[,-c(1,2)]   %>% filter(`t type` == "CC") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.greater.Sphere_CLF[,-c(1,2)]   %>% filter(`t type` == "rea") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.greater.Sphere_CLF[,-c(1,2)]   %>% filter(`t type` == "keg") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+
+gprofilterfilter.greater.Sphere_CLS[,-c(1,2)]   %>% filter(`t type` == "BP") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.greater.Sphere_CLS[,-c(1,2)]   %>% filter(`t type` == "MF") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.greater.Sphere_CLS[,-c(1,2)]   %>% filter(`t type` == "CC") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.greater.Sphere_CLS[,-c(1,2)]   %>% filter(`t type` == "rea") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.greater.Sphere_CLS[,-c(1,2)]   %>% filter(`t type` == "keg") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+
+gprofilterfilter.less.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "BP") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.less.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "MF") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.less.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "CC") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.less.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "rea") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.less.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "keg") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+
+gprofilterfilter.less.Sphere_CLF[,-c(1,2)]   %>% filter(`t type` == "BP") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.less.Sphere_CLF[,-c(1,2)]   %>% filter(`t type` == "MF") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.less.Sphere_CLF[,-c(1,2)]   %>% filter(`t type` == "CC") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.less.Sphere_CLF[,-c(1,2)]   %>% filter(`t type` == "rea") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.less.Sphere_CLF[,-c(1,2)]   %>% filter(`t type` == "keg") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+
+gprofilterfilter.less.Sphere_CLS[,-c(1,2)]   %>% filter(`t type` == "BP") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.less.Sphere_CLS[,-c(1,2)]   %>% filter(`t type` == "MF") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.less.Sphere_CLS[,-c(1,2)]   %>% filter(`t type` == "CC") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.less.Sphere_CLS[,-c(1,2)]   %>% filter(`t type` == "rea") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+gprofilterfilter.less.Sphere_CLS[,-c(1,2)]   %>% filter(`t type` == "keg") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
+
+
+
+
+
+
+
+
+
+
+
+
+# total merge dataframe
+total_without_filter.table <- total_without_filter %>% group_by(Case) %>% summarise(n_0.05 = sum(adjusted.p < 0.05, na.rm = TRUE),
+                                                      n_0.01 = sum(adjusted.p < 0.01, na.rm = TRUE),
+                                                      n_0.001 = sum(adjusted.p < 0.001, na.rm = TRUE),
+                                                      n_0.0001 = sum(adjusted.p < 0.0001, na.rm = TRUE))
+
+
+total_with_filter.table <- total_with_filter %>% group_by(Case) %>% summarise(n_0.05 = sum(adjusted.p < 0.05, na.rm = TRUE),
+                                                   n_0.01 = sum(adjusted.p < 0.01, na.rm = TRUE),
+                                                   n_0.001 = sum(adjusted.p < 0.001, na.rm = TRUE),
+                                                   n_0.0001 = sum(adjusted.p < 0.0001, na.rm = TRUE))
+
 
 total.f.t.greater.annotate %>% filter(Case == "f.t.greater.CLF_CLS" & !is.na(Total) & adjusted.p < 0.001 )
 total.f.t.greater.annotate %>% filter(Case == "f.t.greater.CLF_CLS" & CSmarker == 1 & adjusted.p < 0.001 )
@@ -1065,8 +1245,8 @@ ggplot(data=time.expression) + geom_point(aes(x=time, y=value)) + facet_grid(~pr
 #Sphere_CLS:"230708_at"
 
 
-down.CLF_CLS    <- (total.f.t.less.annotate %>% filter(Case == "f.t.less.CLF_CLS" & adjusted.p < 0.001  ))$Symbol %>% unique
-down.Sphere_CLS <- (total.f.t.less.annotate %>% filter(Case == "f.t.less.Sphere_CLS" & adjusted.p < 0.001 ))$Symbol %>% unique
+down.CLF_CLS    <- (total.f.t.less.annotate %>% filter(Case == "f.t.less.CLF_CLS" & adjusted.p < 0.001  ))$Probe %>% unique
+down.Sphere_CLS <- (total.f.t.less.annotate %>% filter(Case == "f.t.less.Sphere_CLS" & adjusted.p < 0.001 ))$Probe %>% unique
 
 area.1 <- length(down.CLF_CLS )
 area.2 <- length(down.Sphere_CLS)
@@ -1075,204 +1255,4 @@ area.list <- list(area.1, area.2, area.12)
 
 library(VennDiagram)
 draw.pairwise.venn(area1 = area.list[[1]], area2 = area.list[[2]], n12 = area.list[[3]], c("CLF_CLS", "Sphere_CLS"), lty = "blank")
-
-# down-regulation
-total.f.t.less.table <- total.f.t.less %>% group_by(Case) %>% summarise(n_0.05 = sum(adjusted.p < 0.05, na.rm = TRUE),
-                                                                        n_0.01 = sum(adjusted.p < 0.01, na.rm = TRUE),
-                                                                        n_0.001 = sum(adjusted.p < 0.001, na.rm = TRUE),
-                                                                        n_0.0001 = sum(adjusted.p < 0.0001, na.rm = TRUE))
-total.f.t.less <- total.f.t.less %>% dplyr::rename(Probe = gene)
-total.f.t.less.annotate <- left_join(total.f.t.less, total.probe.data.frame, by = "Probe")
-total.f.t.less.annotate %>% group_by(Case) %>% summarise(n_0.05 = sum(adjusted.p < 0.05, na.rm = TRUE),
-                                                       n_0.05_TF = sum(adjusted.p < 0.05 & !is.na(Total), na.rm = TRUE),
-                                                       n_0.05_CS = sum(adjusted.p < 0.05 & CSmarker == 1, na.rm = TRUE),
-                                                       n_0.05_CSrelated = sum(adjusted.p < 0.05 & CSrelated == 1, na.rm = TRUE),
-                                                       n_0.01 = sum(adjusted.p < 0.01, na.rm = TRUE),
-                                                       n_0.01_TF = sum(adjusted.p < 0.01 & !is.na(Total), na.rm = TRUE),
-                                                       n_0.01_CS = sum(adjusted.p < 0.01 & CSmarker == 1, na.rm = TRUE),
-                                                       n_0.01_CSrelated = sum(adjusted.p < 0.01 & CSrelated == 1, na.rm = TRUE),
-                                                       n_0.001 = sum(adjusted.p < 0.001, na.rm = TRUE),
-                                                       n_0.001_TF = sum(adjusted.p < 0.001 & !is.na(Total),na.rm = TRUE),
-                                                       n_0.001_CS = sum(adjusted.p < 0.001 & CSmarker == 1, na.rm = TRUE),
-                                                       n_0.001_CSrelated = sum(adjusted.p < 0.001 & CSrelated == 1, na.rm = TRUE),
-                                                       n_0.0001 = sum(adjusted.p < 0.0001, na.rm = TRUE),
-                                                       n_0.0001_TF = sum(adjusted.p < 0.0001 & !is.na(Total), na.rm = TRUE),
-                                                       n_0.0001_CS = sum(adjusted.p < 0.0001 & CSmarker ==1, na.rm = TRUE),
-                                                       n_0.0001_CSrelated = sum(adjusted.p < 0.0001 & CSrelated ==1, na.rm = TRUE)) %>%
-  tidyr::unite("n_0.0001",c(14:17),sep = "/") %>%
-  tidyr::unite("n_0.001", c(10:13), sep = "/") %>%
-  tidyr::unite("n_0.01", c(6:9), sep = "/") %>%
-  tidyr::unite("n_0.05", c(2:5), sep = "/") 
-
-
-#t-test without filter
-# up-regulation
-
-
-take_specific_intersect(t.greater.CLF_CLS, t.greater.Sphere_CLF, t.greater.Sphere_CLS, method="adjusted.p", p=0.001, section=6) %>% length()
-
-# down-regulation
-
-take_specific_intersect(t.greater.CLF_CLS, t.greater.Sphere_CLF, t.greater.Sphere_CLS, method="adjusted.p", p=0.001, section=6) %>% length()
-
-# output the genesybol for the gprofiler 
-subset <- total.t.less %>% filter(Case == "t.less.CLF_CLS", adjusted.p < 0.001 )   %>% mutate(symbol = getSYMBOL(gene,"hgu133plus2.db"))
-test <- subset %>% filter(is.na(symbol)) %>% mutate(new = convertNA_probe(gene)) 
-test$new[test$new == "1"] <- NA
-subset$symbol[is.na(subset$symbol)] <- test$new
-sum(is.na(subset$symbol))
-
-subset <- total.t.less %>% filter(Case == "t.less.Sphere_CLF", adjusted.p < 0.001)  %>% mutate(symbol = getSYMBOL(gene,"hgu133plus2.db"))
-test <- subset %>% filter(is.na(symbol)) %>% mutate(new = convertNA_probe(gene))
-test$new[test$new == "1"] <- NA
-subset$symbol[is.na(subset$symbol)] <- test$new
-sum(is.na(subset$symbol))
-subset$symbol[!is.na(subset$symbol)] %>% cat
-
-subset <- total.t.less %>% filter(Case == "t.less.Sphere_CLS", adjusted.p < 0.003)  %>% mutate(symbol = getSYMBOL(gene,"hgu133plus2.db"))
-test <- subset %>% filter(is.na(symbol)) %>% mutate(new = convertNA_probe(gene))
-test$new[test$new == "1"] <- NA
-subset$symbol[is.na(subset$symbol)] <- test$new
-sum(is.na(subset$symbol))
-subset$symbol[!is.na(subset$symbol)] %>% cat
-system("say finished")
-
-# t-test with filter
-# up-regulation
-
-
-# output the genesybol for the gprofiler 
-subset <- total.f.t.greater %>% filter(Case == "f.t.greater.CLF_CLS", adjusted.p < 0.001 )   %>% mutate(symbol = getSYMBOL(Probe,"hgu133plus2.db"))
-test <- subset %>% filter(is.na(symbol)) %>% mutate(new = convertNA_probe(gene))
-test$new[test$new == "1"] <- NA
-subset$symbol[is.na(subset$symbol)] <- test$new
-sum(is.na(subset$symbol))
-subset$symbol[!is.na(subset$symbol)] %>% cat
-system("say finished")
-
-
-subset <- total.f.t.greater %>% filter(Case == "f.t.greater.Sphere_CLF", adjusted.p < 0.001 )   %>% mutate(symbol = getSYMBOL(gene,"hgu133plus2.db"))
-test <- subset %>% filter(is.na(symbol)) %>% mutate(new = convertNA_probe(gene))
-test$new[test$new == "1"] <- NA
-subset$symbol[is.na(subset$symbol)] <- test$new
-sum(is.na(subset$symbol))
-subset$symbol[!is.na(subset$symbol)] %>% cat
-system("say finished")
-
-
-subset <- total.f.t.greater %>% filter(Case == "f.t.greater.Sphere_CLS", adjusted.p < 0.003 )   %>% mutate(symbol = getSYMBOL(gene,"hgu133plus2.db"))
-test <- subset %>% filter(is.na(symbol)) %>% mutate(new = convertNA_probe(gene))
-test$new[test$new == "1"] <- NA
-subset$symbol[is.na(subset$symbol)] <- test$new
-sum(is.na(subset$symbol))
-subset$symbol[!is.na(subset$symbol)] %>% cat
-system("say finished")
-
-
-
-# down-regulation
-
-# output the genesybol for the gprofiler 
-subset <- total.f.t.less %>% filter(Case == "f.t.less.CLF_CLS", adjusted.p < 0.001 )   %>% mutate(symbol = getSYMBOL(Probe,"hgu133plus2.db"))
-test <- subset %>% filter(is.na(symbol)) %>% mutate(new = convertNA_probe(gene))
-test$new[test$new == "1"] <- NA
-subset$symbol[is.na(subset$symbol)] <- test$new
-sum(is.na(subset$symbol))
-subset$symbol[!is.na(subset$symbol)] %>% cat
-system("say finished")
-
-
-subset <- total.f.t.less %>% filter(Case == "f.t.less.Sphere_CLF", adjusted.p < 0.001 )   %>% mutate(symbol = getSYMBOL(gene,"hgu133plus2.db"))
-test <- subset %>% filter(is.na(symbol)) %>% mutate(new = convertNA_probe(gene))
-test$new[test$new == "1"] <- NA
-subset$symbol[is.na(subset$symbol)] <- test$new
-sum(is.na(subset$symbol))
-subset$symbol[!is.na(subset$symbol)] %>% cat
-system("say finished")
-
-
-subset <- total.f.t.less %>% filter(Case == "f.t.less.Sphere_CLS", adjusted.p < 0.001 )   %>% mutate(symbol = getSYMBOL(Probe,"hgu133plus2.db"))
-
-test <- subset %>% filter(is.na(symbol)) %>% mutate(new = convertNA_probe(gene))
-test$new[test$new == "1"] <- NA
-subset$symbol[is.na(subset$symbol)] <- test$new
-sum(is.na(subset$symbol))
-subset$symbol[!is.na(subset$symbol)] %>% unique%>% cat
-system("say finished")
-
-# 
-
-
-# Filter ------------------------------------------------------------------
-gprofilterfilter.greater.CLF_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestWITHfilter10_3hierchyfilter /gprofiler_results_filter_upregulation_CLF_CLS.txt", delim = "\t")
-gprofilterfilter.greater.Sphere_CLF <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestWITHfilter10_3hierchyfilter /gprofiler_results_filter_upregulation_Sphere_CLF.txt", delim = "\t")
-gprofilterfilter.greater.Sphere_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestWITHfilter10_3hierchyfilter /gprofiler_results_filter_003_greater_Sphere_CLS.txt", delim = "\t")
-gprofilterfilter.less.CLF_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestWITHfilter10_3hierchyfilter /gprofiler_results_filter_downregulation_CLF_CLS.txt", delim = "\t")
-gprofilterfilter.less.Sphere_CLF <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestWITHfilter10_3hierchyfilter /gprofiler_results_filter_downregulation_Sphere_CLF.txt", delim = "\t")
-gprofilterfilter.less.Sphere_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestWITHfilter10_3hierchyfilter /gprofiler_results_filter_003_downregulation_Sphere_CLS.txt", delim = "\t")
-
-
-
-
-gprofilterfilter.greater.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "BP") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.greater.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "MF") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.greater.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "CC") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.greater.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "rea") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.greater.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "keg") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-
-gprofilterfilter.greater.Sphere_CLF[,-c(1,2)]   %>% filter(`t type` == "BP") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.greater.Sphere_CLF[,-c(1,2)]   %>% filter(`t type` == "MF") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.greater.Sphere_CLF[,-c(1,2)]   %>% filter(`t type` == "CC") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.greater.Sphere_CLF[,-c(1,2)]   %>% filter(`t type` == "rea") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.greater.Sphere_CLF[,-c(1,2)]   %>% filter(`t type` == "keg") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-
-gprofilterfilter.greater.Sphere_CLS[,-c(1,2)]   %>% filter(`t type` == "BP") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.greater.Sphere_CLS[,-c(1,2)]   %>% filter(`t type` == "MF") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.greater.Sphere_CLS[,-c(1,2)]   %>% filter(`t type` == "CC") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.greater.Sphere_CLS[,-c(1,2)]   %>% filter(`t type` == "rea") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.greater.Sphere_CLS[,-c(1,2)]   %>% filter(`t type` == "keg") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-
-gprofilterfilter.less.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "BP") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.less.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "MF") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.less.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "CC") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.less.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "rea") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.less.CLF_CLS[,-c(1,2)]   %>% filter(`t type` == "keg") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-
-gprofilterfilter.less.Sphere_CLF[,-c(1,2)]   %>% filter(`t type` == "BP") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.less.Sphere_CLF[,-c(1,2)]   %>% filter(`t type` == "MF") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.less.Sphere_CLF[,-c(1,2)]   %>% filter(`t type` == "CC") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.less.Sphere_CLF[,-c(1,2)]   %>% filter(`t type` == "rea") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.less.Sphere_CLF[,-c(1,2)]   %>% filter(`t type` == "keg") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-
-gprofilterfilter.less.Sphere_CLS[,-c(1,2)]   %>% filter(`t type` == "BP") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.less.Sphere_CLS[,-c(1,2)]   %>% filter(`t type` == "MF") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.less.Sphere_CLS[,-c(1,2)]   %>% filter(`t type` == "CC") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.less.Sphere_CLS[,-c(1,2)]   %>% filter(`t type` == "rea") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-gprofilterfilter.less.Sphere_CLS[,-c(1,2)]   %>% filter(`t type` == "keg") %>% mutate_each(funs(as.numeric),c(1:3)) %>% arrange(`p-value`)
-
-
-
-
-
-
-
-
-
-
-
-
-# total merge dataframe
-total_without_filter.table <- total_without_filter %>% group_by(Case) %>% summarise(n_0.05 = sum(adjusted.p < 0.05, na.rm = TRUE),
-                                                      n_0.01 = sum(adjusted.p < 0.01, na.rm = TRUE),
-                                                      n_0.001 = sum(adjusted.p < 0.001, na.rm = TRUE),
-                                                      n_0.0001 = sum(adjusted.p < 0.0001, na.rm = TRUE))
-
-
-total_with_filter.table <- total_with_filter %>% group_by(Case) %>% summarise(n_0.05 = sum(adjusted.p < 0.05, na.rm = TRUE),
-                                                   n_0.01 = sum(adjusted.p < 0.01, na.rm = TRUE),
-                                                   n_0.001 = sum(adjusted.p < 0.001, na.rm = TRUE),
-                                                   n_0.0001 = sum(adjusted.p < 0.0001, na.rm = TRUE))
-
-
-
 

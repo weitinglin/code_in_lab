@@ -13,7 +13,7 @@
 #library(annotate)
 #library(hgu133plus2.db)
 #library(affy)
-source("/Users/Weitinglin/Documents/R_scripts/Lab/microarray201610/microarry_function.R")
+source("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/analysis/microarry_function.R")
 library(tidyr)
 library(pryr)
 library(affyPLM)
@@ -33,8 +33,10 @@ celfile.set <- do_phenodata(data.path = data.path, experiment.set = experiment.s
 #use the mas5,in order not to log twice
 Exprs.data <- mas5 ( celfile.set , normalize = FALSE, analysis = "absolute", sc = 500)
 
-
-
+#location of the file
+#/Users/Weitinglin/Documents/R_scripts/Lab/microarray/data/intermediate
+save(Exprs.data, file="Exprs_data.RData")
+load("Exprs_data.RData")
 ##expression profile
 ecelfile.set <- exprs ( Exprs.data )
 
@@ -624,6 +626,130 @@ filterQN_CLF_CLS   <- prefilter_choose(QN_CLF_CLS_eSet , method = "filterbyvaria
 filterQN_Sphere_CLF<- prefilter_choose(QN_Sphere_CLF_eSet , method = "filterbyvariance", parameters = c(0.5))
 filterQN_Sphere_CLS<- prefilter_choose(QN_Sphere_CLS_eSet , method = "filterbyvariance", parameters = c(0.5))
 
+
+# _greater ----------------------------------------------------------------
+f.t.greater.CLF_CLS      <- t_test(expression = exprs(filterQN_CLF_CLS), adj.method = "BH", hypothesis = "greater")
+f.t.greater.Sphere_CLF   <- t_test(expression = exprs(filterQN_Sphere_CLF), adj.method = "BH", hypothesis = "greater")
+f.t.greater.Sphere_CLS   <- t_test(expression = exprs(filterQN_Sphere_CLS), adj.method = "BH", hypothesis = "greater")
+
+# _less -------------------------------------------------------------------
+f.t.less.CLF_CLS      <- t_test(expression = exprs(filterQN_CLF_CLS), adj.method = "BH", hypothesis = "less")
+f.t.less.Sphere_CLF   <- t_test(expression = exprs(filterQN_Sphere_CLF), adj.method = "BH", hypothesis = "less")
+f.t.less.Sphere_CLS   <- t_test(expression = exprs(filterQN_Sphere_CLS), adj.method = "BH", hypothesis = "less")
+
+
+# _write table ------------------------------------------------------------
+
+write.table(f.t.greater.CLF_CLS,"greaterfilter50QNttestCLF_CLS.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+write.table(f.t.greater.Sphere_CLF,"greaterfilter50QNttestCLF_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+write.table(f.t.greater.Sphere_CLS,"greaterfilter50QNttestCLS_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+
+write.table(f.t.less.CLF_CLS,"lessfilter50QNttestCLF_CLS.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+write.table(f.t.less.Sphere_CLF,"lessfilter50QNttestCLF_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+write.table(f.t.less.Sphere_CLS,"lessfilter50QNttestCLS_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
+
+
+
+# EX07 MAS5, QN, LOG2, Characteristic Direction ---------------------------
+
+GeoDE.norm <- norm
+GeoDE.norm <- as.data.frame(GeoDE.norm)
+GeoDE.norm$Probenames <- rownames(GeoDE.norm) 
+GeoDE.norm.Sphere_CLS <- GeoDE.norm[,c(10,4:9)]
+GeoDE.norm.CLF_CLS    <- GeoDE.norm[c(10,4:6,1:3)]
+library(GeoDE)
+# Load the example data
+data(example_expression_data)
+data(example_sampleclass)
+data(example_gammas)
+# Examine the expression data
+head(example_expression_data)
+# Examine the corresponding sample class factor
+example_sampleclass
+
+# Run the analysis
+chdir_analysis_example <- chdirAnalysis(GeoDE.norm.Sphere_CLS,example_sampleclass,example_gammas
+                                        ,CalculateSig=TRUE,nnull=10)
+# Examine the results with the first value of the shrinkage parameter (gamma)
+# show the first few of the most important genes.
+lapply(chdir_analysis_example$results, function(x) x[1:10])
+# We can also extract the results of the \code{chdirSig} function
+# for example chdir_analysis_example$chdirprops[[1]] gives the whole
+# characteristic direction vector for each value of gamma:
+lapply(chdir_analysis_example$chdirprops[[1]],head)
+# and the estimated number of significant genes can be recovered with
+chdir_analysis_example$chdirprops$number_sig_genes
+
+
+# Appendix: Annotation  -------------------------------------------------------------
+# the library dependence
+library(hgu133plus2.db)
+library(readxl)
+library(annotate)
+# getSYMBOL(x, data)
+# getLL(x, data)
+# getEG(x, data)
+# getGO(x, data)
+# getPMID(x, data)
+# getGOdesc(x, which)
+# lookUp(x, data, what, load = FALSE)
+# getUniqAnnItem()
+# Load the Gene Ontology information  
+
+hgu133plus2.probe <- rownames(ecelfile.set)
+save(hgu133plus2.probe, file = "hgu133plus2.RData")
+load("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/data/intermediate/hgu133plus2.RData")
+
+
+hgu133plus2.probe.annotate <- gconvert(hgu133plus2.probe,
+                                       organism = "hsapiens",
+                                       target="AFFY_HG_U133_PLUS_2",
+                                       mthreshold=1,
+                                       filter_na = TRUE,
+                                       df =T)
+#turn upper to lower
+hgu133plus2.probe.annotate <- hgu133plus2.probe.annotate %>% mutate(Probe=tolower(alias))
+#save to RData
+save(hgu133plus2.probe.annotate, file="hgu133plus2_annotation.RData")
+
+
+unnotated.probe <- total.probe.data.frame[is.na(total.probe.data.frame$Gene),]
+unnotated.probe <- unnotated.probe$Probe
+getGO(unnotated.probe,"hgu133plus2")
+probel.relatedTF <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/data/Affymetrix_reference/proberelateTF.txt",delim=" ")
+
+cancer_stem_marker <- read_excel("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/data/CSCdbdata/marker_list.xls")
+#57
+cancer_stem_related_marker <- read_excel("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/data/CSCdbdata/annotation.xls")
+#13,308
+study.interest <- c("NANOG","IGF1R","SDF1","POU5F2","POU5F1P3","POU5F1P4","POU5F1B","HGF","POU5F1","IGF2","LIF","TGF","SOX2","THY1","JAK1",
+                    "CXCR4","IGF2","THY-1","ABCG2","ABCG","ABCG1","ALDH1","CD133","SDF2",
+                    "CD44","PROM1","MYC","BMI1","EZH2","KIT","PAR","IGFBP","IGFBP1","IGFBP2","GCSF",
+                    "CHBD","ANGPT","NT","IL3","IL4","IL5","IL7","CCL18","CCL11","FGF2","EPHA1","TGFBR1","TGFBR2","LIFR","SMAD2","YAP1","TCF21")
+Cancer.stem.marker <- unique(cancer_stem_marker$symbol)
+Cancer.stem.related <- unique(cancer_stem_related_marker$symbol)
+
+total.probe <- hgu133plus2.probe
+total.probe.data.frame <- data.frame(Probe = total.probe)
+total.probe.data.frame <- left_join(total.probe.data.frame, probel.relatedTF)
+# get gene symbom annotation with hgu133plus2.db
+#total.probe.data.frame <- total.probe.data.frame %>% mutate(Gene = getSYMBOL(Probe,"hgu133plus2"))
+total.probe.data.frame <- total.probe.data.frame %>% left_join(.,dplyr::select(hgu133plus2.probe.annotate,Probe,name,description))
+
+total.probe.data.frame$CSmarker[total.probe.data.frame$name %in% Cancer.stem.marker] <- 1
+total.probe.data.frame$CSrelated[total.probe.data.frame$name %in% Cancer.stem.related] <- 1
+
+
+# use gprofiler to query the NA value
+# function convertNA_probe use the gprofiler pacakge
+# it's easily to face the proxy error
+for ( i in 1:225){
+    start <- 1+ 243*(i-1)
+    end <- 243*i
+    total.probe.data.frame[start:end,] <- convertNA_probe(total.probe.data.frame[start:end,])
+}
+
+
 # Post Filter Assessmnet --------------------------------------------------
 nofilter <- exprs(QN_CLF_CLS_eSet )
 nofilter <- as.data.frame(nofilter)
@@ -668,24 +794,5 @@ ggplot(data = combine, aes(x = value)) +
 
 
 #for CLS-CLF
-# _greater ----------------------------------------------------------------
-f.t.greater.CLF_CLS      <- t_test(expression = exprs(filterQN_CLF_CLS), adj.method = "BH", hypothesis = "greater")
-f.t.greater.Sphere_CLF   <- t_test(expression = exprs(filterQN_Sphere_CLF), adj.method = "BH", hypothesis = "greater")
-f.t.greater.Sphere_CLS   <- t_test(expression = exprs(filterQN_Sphere_CLS), adj.method = "BH", hypothesis = "greater")
 
-# _less -------------------------------------------------------------------
-f.t.less.CLF_CLS      <- t_test(expression = exprs(filterQN_CLF_CLS), adj.method = "BH", hypothesis = "less")
-f.t.less.Sphere_CLF   <- t_test(expression = exprs(filterQN_Sphere_CLF), adj.method = "BH", hypothesis = "less")
-f.t.less.Sphere_CLS   <- t_test(expression = exprs(filterQN_Sphere_CLS), adj.method = "BH", hypothesis = "less")
-
-
-# _write table ------------------------------------------------------------
-
-write.table(f.t.greater.CLF_CLS,"greaterfilter50QNttestCLF_CLS.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
-write.table(f.t.greater.Sphere_CLF,"greaterfilter50QNttestCLF_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
-write.table(f.t.greater.Sphere_CLS,"greaterfilter50QNttestCLS_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
-
-write.table(f.t.less.CLF_CLS,"lessfilter50QNttestCLF_CLS.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
-write.table(f.t.less.Sphere_CLF,"lessfilter50QNttestCLF_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
-write.table(f.t.less.Sphere_CLS,"lessfilter50QNttestCLS_Sphere.txt", quote=TRUE, sep="\t",row.names=TRUE, col.names = TRUE)
 
