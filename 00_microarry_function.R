@@ -232,7 +232,7 @@ searchHarmonizome <- function(genelist){
     
     
     for ( item in genelist){
-        raw <- paste0(url,item) %>% GET %>% content(., "text", encoding = "ISO-8859-1") %>% fromJSON
+        raw <- paste0(url,item) %>% GET %>% httr::content(.,"text", encoding = "ISO-8859-1") %>% fromJSON
         
         gene.symbol       <- checkExist(raw$symbol)
         gene.name         <- checkExist(raw$name)
