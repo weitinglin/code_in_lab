@@ -236,8 +236,8 @@ searchHarmonizome <- function(genelist){
         
         gene.symbol       <- checkExist(raw$symbol)
         gene.name         <- checkExist(raw$name)
-        gene.synonyms     <- checkExist(reduce(raw$synonyms, paste, sep=","))
-        gene.description  <- checkExist(reduce(raw$description, paste, sep=","))
+        gene.synonyms     <- checkExist(purrr::reduce(raw$synonyms, paste, sep=","))
+        gene.description  <- checkExist(purrr::reduce(raw$description, paste, sep=","))
         
         
         
