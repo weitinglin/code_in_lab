@@ -4,19 +4,9 @@
 
 
 #library in the source R code
-#library(affy) #
-#library(GEOquery) #
-#library(hgu133plus2cdf) #
-#library(ggplot2)
-#library(dplyr)
-#library(limma)
-#library(annotate)
-#library(hgu133plus2.db)
-#library(affy)
+
 source("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/analysis/microarry_function.R")
-library(tidyr)
-library(pryr)
-library(affyPLM)
+
 
 
 

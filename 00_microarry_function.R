@@ -1,4 +1,5 @@
-#microarray function
+
+# Loading package ---------------------------------------------------------
 library(affy) #
 library(GEOquery) #
 library(hgu133plus2cdf) #
@@ -19,12 +20,16 @@ library(GO.db)
 library(foreach) #selective
 library(doParallel) #selective
 library(purrr)
+library(rprojroot)
+library(tidyr)
+library(pryr)
+library(affyPLM)
 #bioconductor
 source("https://bioconductor.org/biocLite.R")
 
 #Phenodata and load the celfile
-data.path  <- file.path("/Users/Weitinglin/Documents/2016 實驗室資料處理/201510 microarray/raw data 20100114/set 8 CLS CLF Sphere")
-experiment.set <- c ( rep ("set8_withfibroblast" , 3 ) , rep ( "set8_withoutfibroblast" , 3 ), rep("set8_sphere", 3) )
+#data.path  <- file.path("/Users/Weitinglin/Documents/2016 實驗室資料處理/201510 microarray/raw data 20100114/set 8 CLS CLF Sphere")
+#experiment.set <- c ( rep ("set8_withfibroblast" , 3 ) , rep ( "set8_withoutfibroblast" , 3 ), rep("set8_sphere", 3) )
 
 do_phenodata <- function(data.path, experiment.set){
   
@@ -139,17 +144,17 @@ testing_wilcox_old <- function(eSet){
 }
 
 #whether a probe is a TF or not
-TF.BP.GO.path <- file.path("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/GO_BP_TF.txt")
-TF.CC.GO.path <- file.path("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/GO_CC_TF.txt")
-TF.MF.GO.path <- file.path("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/GO_MF_TF.txt")
-
-TF.BP.GO <- read_delim(TF.BP.GO.path, col_names = c("GO_identifier", "description"),delim = "\t")
-TF.CC.GO <- read_delim(TF.CC.GO.path, col_names =c("GO_identifier", "description"), delim = "\t")
-TF.MF.GO <- read_delim(TF.MF.GO.path, col_names = c("GO_identifier", "description"), delim = "\t")
-
-TF.BP.GO.id <- TF.BP.GO$GO_identifier 
-TF.CC.GO.id <- TF.CC.GO$GO_identifier 
-TF.MF.GO.id <- TF.MF.GO$GO_identifier
+# TF.BP.GO.path <- file.path("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/GO_BP_TF.txt")
+# TF.CC.GO.path <- file.path("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/GO_CC_TF.txt")
+# TF.MF.GO.path <- file.path("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/GO_MF_TF.txt")
+# 
+# TF.BP.GO <- read_delim(TF.BP.GO.path, col_names = c("GO_identifier", "description"),delim = "\t")
+# TF.CC.GO <- read_delim(TF.CC.GO.path, col_names =c("GO_identifier", "description"), delim = "\t")
+# TF.MF.GO <- read_delim(TF.MF.GO.path, col_names = c("GO_identifier", "description"), delim = "\t")
+# 
+# TF.BP.GO.id <- TF.BP.GO$GO_identifier 
+# TF.CC.GO.id <- TF.CC.GO$GO_identifier 
+# TF.MF.GO.id <- TF.MF.GO$GO_identifier
 
 
 getprobeRelateToGoTF <- function(probelist){
