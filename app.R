@@ -5,10 +5,14 @@ ui <- tagList(
    
     navbarPage(title = "Project",
         tabPanel(
-            "Introduction",
+            title = "Introduction",
             column(12,
                    includeMarkdown("DESCRIPTION.md")
                    )
+        ),
+        tabPanel(
+            title = "Workflow",
+            img(src="workflow.png")
         )
     ) 
    
