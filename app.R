@@ -1,8 +1,5 @@
 library(shiny)
-library(VennDiagram)
 
-
-library(shiny)
 
 ui <- tagList( 
    
