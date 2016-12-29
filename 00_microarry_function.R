@@ -24,6 +24,8 @@ library(rprojroot)
 library(tidyr)
 library(pryr)
 library(affyPLM)
+library(httr)
+library(rjson)
 #bioconductor
 source("https://bioconductor.org/biocLite.R")
 
@@ -208,3 +210,44 @@ testing_wilcox <- function(eSet, adj.method="BH"){
                                             adjusted.method = adj.method)
   return(wilcox.result)
 }
+
+
+
+
+# api ---------------------------------------------------------------------
+#depent on purrr, dplyr, httr, rjson
+searchHarmonizome <- function(genelist){
+    dataframe <- data.frame(symbol = c(),
+                            name = c(),
+                            synonyms = c(),
+                            description = c())
+    url <- "http://amp.pharm.mssm.edu/Harmonizome/api/1.0/gene/"
+    checkExist <- function(request.result){
+        if(is.null(request.result)){
+            return("NULL")
+        }else if(nchar(request.result) == 0){
+            return("NULL")
+        }else(return(request.result))
+    }
+    
+    
+    for ( item in genelist){
+        raw <- paste0(url,item) %>% GET %>% content(., "text", encoding = "ISO-8859-1") %>% fromJSON
+        
+        gene.symbol       <- checkExist(raw$symbol)
+        gene.name         <- checkExist(raw$name)
+        gene.synonyms     <- checkExist(reduce(raw$synonyms, paste, sep=","))
+        gene.description  <- checkExist(reduce(raw$description, paste, sep=","))
+        
+        
+        
+        request.dataframe <- data.frame(symbol = gene.symbol,
+                                        name = gene.name,
+                                        synonyms = gene.synonyms,
+                                        description = gene.description)
+        dataframe <- bind_rows(dataframe, request.dataframe)
+    }
+    return(dataframe)
+    
+}
+
