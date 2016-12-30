@@ -67,6 +67,15 @@ ui <- tagList(
             img(src="workflow.png")
         ),
         tabPanel(
+          title = "Result",
+          fluidRow(
+              selectInput(inputId = "Result.filter",
+                          label = "Filter:",
+                          choices = c("Nofilter" = "Nofilter","Filter"="Filter"))
+          ),
+          fluidRow()
+        ),
+        tabPanel(
             title = "Gene",
             dataTableOutput(outputId = "queryResult")
         )
