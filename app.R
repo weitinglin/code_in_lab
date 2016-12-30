@@ -135,14 +135,16 @@ server <- function(input, output){
             geom_violin(aes(x = Case, y = A)) +
             facet_grid(Method ~ .) +
             geom_hline(yintercept = input$Result.A.upper) +
-            geom_hline(yintercept = input$Result.A.lower)
+            geom_hline(yintercept = input$Result.A.lower) 
             
         
     })
     
     output$Result.MAplot <- renderPlot({
-        total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2), M = estimate1 - estimate2) %>% ggplot() +
-            geom_point(aes(x = A, y = M), alpha = 0.5, color = "blue") +
+        total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2),
+                                      M = estimate1 - estimate2,
+                                      P = cut(adjusted.p, c(0,0.0001,0.001,0.01,0.05,1),c("p<0.0001","p<0.001","p<0.01","p<0.05","p>0.05"))) %>% ggplot() +
+            geom_point(aes(x = A, y = M, colour=P), alpha = 0.5) +
             facet_grid(Method ~ Case) +
             geom_vline(xintercept = input$Result.A.upper) +
             geom_vline(xintercept = input$Result.A.lower)
