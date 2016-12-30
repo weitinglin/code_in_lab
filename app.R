@@ -85,15 +85,16 @@ ui <- tagList(
           ),
           fluidRow(
               column(1),
-              column(11,dataTableOutput(outputId = "Result.table")))
+              column(11,dataTableOutput(outputId = "Result.table"))),
+          fluidRow(
+              column(1),
+              column(11,plotOutput(outputId = "Result.plot")))
         ),
         tabPanel(
             title = "Gene",
-            dataTableOutput(outputId = "queryResult")
-        )
-        )
-    ) 
-   
+            dataTableOutput(outputId = "queryResult"))
+        ) 
+)
 
 
 # SERVER part -------------------------------------------------------------
@@ -113,9 +114,22 @@ server <- function(input, output){
                       n_0.0001 = sum(adjusted.p < 0.0001, na.rm = TRUE))
     })
     
+    output$Result.plot <- renderPlot({
+        total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2)) %>% ggplot() +
+            geom_violin(aes(x = Case, y = A)) +
+            facet_grid(Method ~ .) +
+            geom_hline(yintercept = input$Result.A.upper) +
+            geom_hline(yintercept = input$Result.A.lower)
+            
+        
+    })
+    
+    
     output$queryResult <-  renderDataTable({
         searchHarmonizome(c("CD44","ALDH1A3","CD9","CDKN2A","DPP4","HSPB1","KIT","NANOG"))
     })
+    
+    
     
     
     }
