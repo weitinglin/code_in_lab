@@ -76,6 +76,15 @@ ui <- tagList(
           ),
           fluidRow(
               column(1),
+              column(5,sliderInput(inputId = "Result.A.upper",
+                                    label = "Filter with expression level(A) post ttest: Lower than",
+                                    min = 1, max = 12, step = 0.5, value = 12)),
+              column(5,sliderInput(inputId = "Result.A.lower",
+                                    label = "Filter with expression level(A) post ttest: Larger than",
+                                    min = 1, max = 12, step = 0.5, value = 1))
+          ),
+          fluidRow(
+              column(1),
               column(11,dataTableOutput(outputId = "Result.table")))
         ),
         tabPanel(
@@ -96,6 +105,8 @@ server <- function(input, output){
         total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2)) %>% group_by(Case) %>% 
             filter(Method == input$Result.filter) %>%
             filter(!Case %in% c ("P6-Sphere > P6+fibroblast","P6-Sphere < P6+fibroblast", "P6-Sphere < P6+fibroblast nofilter", "P6-Sphere > P6+fibroblast nofilter")) %>% 
+            filter(A < input$Result.A.upper) %>%
+            filter(A > input$Result.A.lower) %>%
             summarise(n_0.05 = sum(adjusted.p < 0.05, na.rm = TRUE),
                       n_0.01 = sum(adjusted.p < 0.01, na.rm = TRUE),
                       n_0.001 = sum(adjusted.p < 0.001, na.rm = TRUE),
