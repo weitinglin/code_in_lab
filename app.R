@@ -88,12 +88,28 @@ ui <- tagList(
               column(11,dataTableOutput(outputId = "Result.table"))),
           fluidRow(
               column(1),
-              column(11,plotOutput(outputId = "Result.plot")))
+              column(11,plotOutput(outputId = "Result.plot"))),
+          fluidRow(
+              column(1),
+              column(11,plotOutput(outputId = "Result.MAplot")))
         ),
         tabPanel(
             title = "Gene",
-            dataTableOutput(outputId = "queryResult"))
+            fluidRow(
+                column(1),
+                column(3,selectInput(inputId = "Gene.filter",
+                                      label = "Pre-filter before the t-test:",
+                                      choices = c("Nofilter" = "Nofilter","Filter by variance at 50%"="Filter")),
+                column(4,sliderInput(inputId = "Gene.A.upper",
+                                            label = "Filter with expression level(A) post ttest: Lower than",
+                                            min = 1, max = 12, step = 0.5, value = 12)),
+                column(4,sliderInput(inputId = "Gene.A.lower",
+                                            label = "Filter with expression level(A) post ttest: Larger than",
+                                            min = 1, max = 12, step = 0.5, value = 1))
+            ),
+            fluidRow(dataTableOutput(outputId = "queryResult")))
         ) 
+    )
 )
 
 
@@ -124,6 +140,13 @@ server <- function(input, output){
         
     })
     
+    output$Result.MAplot <- renderPlot({
+        total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2), M = estimate1 - estimate2) %>% ggplot() +
+            geom_point(aes(x = A, y = M), alpha = 0.5, color = "blue") +
+            facet_grid(Method ~ Case) +
+            geom_vline(xintercept = input$Result.A.upper) +
+            geom_vline(xintercept = input$Result.A.lower)
+    })
     
     output$queryResult <-  renderDataTable({
         searchHarmonizome(c("CD44","ALDH1A3","CD9","CDKN2A","DPP4","HSPB1","KIT","NANOG"))
