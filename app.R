@@ -69,11 +69,14 @@ ui <- tagList(
         tabPanel(
           title = "Result",
           fluidRow(
-              selectInput(inputId = "Result.filter",
+              column(1),
+              column(11,selectInput(inputId = "Result.filter",
                           label = "Filter:",
-                          choices = c("Nofilter" = "Nofilter","Filter"="Filter"))
+                          choices = c("Nofilter" = "Nofilter","Filter"="Filter")))
           ),
-          fluidRow()
+          fluidRow(
+              column(1),
+              column(11,dataTableOutput(outputId = "Result.table")))
         ),
         tabPanel(
             title = "Gene",
@@ -88,6 +91,15 @@ ui <- tagList(
 
 
 server <- function(input, output){
+    
+    output$Result.table <- renderDataTable({
+        total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2)) %>% group_by(Case) %>% 
+            summarise(n_0.05 = sum(adjusted.p < 0.05, na.rm = TRUE),
+                      n_0.01 = sum(adjusted.p < 0.01, na.rm = TRUE),
+                      n_0.001 = sum(adjusted.p < 0.001, na.rm = TRUE),
+                      n_0.0001 = sum(adjusted.p < 0.0001, na.rm = TRUE))
+    })
+    
     output$queryResult <-  renderDataTable({
         searchHarmonizome(c("CD44","ALDH1A3","CD9","CDKN2A","DPP4","HSPB1","KIT","NANOG"))
     })
