@@ -143,7 +143,7 @@ ui <- tagList(
             ),
             fluidRow(
                 column(3,helpText('The Number of DE probe')),
-                column(9,verbatimTextOutput('Gene.number'))
+                column(9,dataTableOutput('Gene.number'))
             ),
             fluidRow(
                 column(3, plotOutput(outputId = "Gene.MAplot"))
@@ -227,12 +227,16 @@ server <- function(input, output){
         unname(getSYMBOL(tmp()$gene,"hgu133plus2.db"))  
     })
     
+    probe.list <- reactive({
+        names(getSYMBOL(tmp()$gene,"hgu133plus2.db"))
+    })
     # output$Gene.query <-  renderDataTable({
     #     searchHarmonizome(gene.list()[!is.na(gene.list())])
     # })
     
-    output$Gene.number <- renderPrint({
-        gene.list()[!is.na(gene.list())] %>% cat
+    output$Gene.number <- renderDataTable({
+        data.frame(Probe = probe.list(),
+                   Symbole = gene.list())
        
     })
     
