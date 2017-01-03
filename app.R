@@ -142,11 +142,13 @@ ui <- tagList(
                                         ))
             ),
             fluidRow(
-                column(3,helpText('The Number of DE probe')),
-                column(9,dataTableOutput('Gene.number'))
+                #column(3,helpText('The Number of DE probe')),
+                column(3, plotOutput(outputId = "Gene.MAplot")),
+                column(6,dataTableOutput('Gene.number')),
+                column(3)
             ),
             fluidRow(
-                column(3, plotOutput(outputId = "Gene.MAplot"))
+                 #column(3, plotOutput(outputId = "Gene.MAplot"))
                 # column(9,dataTableOutput(outputId = "Gene.query"))
                 )
             )
