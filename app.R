@@ -141,11 +141,13 @@ ui <- tagList(
                                                      "P6+fibroblast < p6")
                                         ))
             ),
+            fluidRow(column(12)),
             fluidRow(
                 #column(3,helpText('The Number of DE probe')),
+                column(1),
                 column(3, plotOutput(outputId = "Gene.MAplot")),
                 column(6,dataTableOutput('Gene.number')),
-                column(3)
+                column(2)
             ),
             fluidRow(
                  #column(3, plotOutput(outputId = "Gene.MAplot"))
@@ -238,7 +240,7 @@ server <- function(input, output){
     
     output$Gene.number <- renderDataTable({
         DT::datatable(data.frame(Probe = probe.list(),
-                   Symbole = gene.list()),
+                   Symbol = gene.list()),
                    options = list(
                        lengthMenu = list(c(2, 15, -1), c("2", "15", "All")),
                        pageLength = 15
