@@ -703,9 +703,10 @@ hgu133plus2.probe.annotate <- hgu133plus2.probe.annotate %>% mutate(Probe=tolowe
 save(hgu133plus2.probe.annotate, file="hgu133plus2_annotation.RData")
 
 
-unnotated.probe <- total.probe.data.frame[is.na(total.probe.data.frame$Gene),]
-unnotated.probe <- unnotated.probe$Probe
-getGO(unnotated.probe,"hgu133plus2")
+# unnotated.probe <- total.probe.data.frame[is.na(total.probe.data.frame$Gene),]
+# unnotated.probe <- unnotated.probe$Probe
+# getGO(unnotated.probe,"hgu133plus2")
+
 probel.relatedTF <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/data/Affymetrix_reference/proberelateTF.txt",delim=" ")
 
 cancer_stem_marker <- read_excel("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/data/CSCdbdata/marker_list.xls")
@@ -730,14 +731,11 @@ total.probe.data.frame$CSmarker[total.probe.data.frame$name %in% Cancer.stem.mar
 total.probe.data.frame$CSrelated[total.probe.data.frame$name %in% Cancer.stem.related] <- 1
 
 
-# use gprofiler to query the NA value
-# function convertNA_probe use the gprofiler pacakge
-# it's easily to face the proxy error
-for ( i in 1:225){
-    start <- 1+ 243*(i-1)
-    end <- 243*i
-    total.probe.data.frame[start:end,] <- convertNA_probe(total.probe.data.frame[start:end,])
-}
+save(total.probe.data.frame, file = "total_probe_dataframe.Rdata")
+
+
+
+
 
 
 # Post Filter Assessmnet --------------------------------------------------

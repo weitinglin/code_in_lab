@@ -716,8 +716,10 @@ annotate_the_ttest <- function(x){
 # ******************************** ----------------------------------------
 
 
-# QN, Log2, withoutfilter upregulation and downregulation ----------------
+# Data input --------------------------------------------------------------
 
+
+# No filter ---------------------------------------------------------------
 #for CLS-CLF: No filter
 # _greater
 
@@ -732,20 +734,89 @@ t.less.Sphere_CLS   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/mic
 # UP-regulation 
 
 
-t.greater.CLF_CLS <- t.greater.CLF_CLS %>% mutate(Case = "t.greater.CLF_CLS")
-t.greater.Sphere_CLF <- t.greater.Sphere_CLF %>% mutate(Case = "t.greater.Sphere_CLF")
-t.greater.Sphere_CLS <- t.greater.Sphere_CLS %>% mutate(Case = "t.greater.Sphere_CLS")
+t.greater.CLF_CLS <- t.greater.CLF_CLS %>% mutate(Case = "t.greater.CLF_CLS", Method = "Nofilter")
+t.greater.Sphere_CLF <- t.greater.Sphere_CLF %>% mutate(Case = "t.greater.Sphere_CLF", Method = "Nofilter")
+t.greater.Sphere_CLS <- t.greater.Sphere_CLS %>% mutate(Case = "t.greater.Sphere_CLS", Method = "Nofilter")
 total.t.greater <- bind_rows(t.greater.CLF_CLS, t.greater.Sphere_CLF, t.greater.Sphere_CLS)
 
 
 # DOWN-regulation 
-t.less.CLF_CLS <- t.less.CLF_CLS %>% mutate(Case = "t.less.CLF_CLS")
-t.less.Sphere_CLF <- t.less.Sphere_CLF %>% mutate(Case = "t.less.Sphere_CLF")
-t.less.Sphere_CLS <- t.less.Sphere_CLS %>% mutate(Case = "t.less.Sphere_CLS")
+t.less.CLF_CLS <- t.less.CLF_CLS %>% mutate(Case = "t.less.CLF_CLS", Method = "Nofilter")
+t.less.Sphere_CLF <- t.less.Sphere_CLF %>% mutate(Case = "t.less.Sphere_CLF", Method = "Nofilter")
+t.less.Sphere_CLS <- t.less.Sphere_CLS %>% mutate(Case = "t.less.Sphere_CLS", Method = "Nofilter")
 total.t.less <- bind_rows(t.less.CLF_CLS, t.less.Sphere_CLF, t.less.Sphere_CLS)
 
 # group_without_filter 
 total_without_filter <- bind_rows(total.t.greater, total.t.less)
+
+
+# Filter ------------------------------------------------------------------
+
+#for CLS-CLF: filter by 0.5
+# _greater 
+f.t.greater.CLF_CLS      <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/greaterfilter50QNttestCLF_CLS.txt", delim="\t")
+f.t.greater.Sphere_CLF   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/greaterfilter50QNttestCLF_Sphere.txt", delim="\t")
+f.t.greater.Sphere_CLS   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/greaterfilter50QNttestCLS_Sphere.txt", delim="\t")
+
+# _less 
+f.t.less.CLF_CLS      <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/lessfilter50QNttestCLF_CLS.txt", delim="\t")
+f.t.less.Sphere_CLF   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/lessfilter50QNttestCLF_Sphere.txt", delim="\t")
+f.t.less.Sphere_CLS   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/lessfilter50QNttestCLS_Sphere.txt", delim="\t")
+
+
+
+
+# t.test with filter 
+
+
+# UP-regulation 
+f.t.greater.CLF_CLS <- f.t.greater.CLF_CLS %>% mutate(Case = "f.t.greater.CLF_CLS", Method = "Filter")
+f.t.greater.Sphere_CLF <- f.t.greater.Sphere_CLF %>% mutate(Case = "f.t.greater.Sphere_CLF", Method = "Filter")
+f.t.greater.Sphere_CLS <- f.t.greater.Sphere_CLS %>% mutate(Case = "f.t.greater.Sphere_CLS", Method = "Filter")
+total.f.t.greater <- bind_rows(f.t.greater.CLF_CLS, f.t.greater.Sphere_CLF, f.t.greater.Sphere_CLS)
+
+
+# DOWN-regulation 
+f.t.less.CLF_CLS <- f.t.less.CLF_CLS %>% mutate(Case = "f.t.less.CLF_CLS", Method = "Filter")
+f.t.less.Sphere_CLF <- f.t.less.Sphere_CLF %>% mutate(Case = "f.t.less.Sphere_CLF", Method = "Filter") 
+f.t.less.Sphere_CLS <- f.t.less.Sphere_CLS %>% mutate(Case = "f.t.less.Sphere_CLS", Method = "Filter") 
+total.f.t.less <- bind_rows(f.t.less.CLF_CLS, f.t.less.Sphere_CLF, f.t.less.Sphere_CLS)
+
+
+
+# group_with_filter 
+total_with_filter    <- bind_rows(total.f.t.greater, total.f.t.less)
+
+
+
+# combine all 
+total_ttest_result <- bind_rows(total_without_filter, total_with_filter)
+save(total_ttest_result, file = "total_ttest_result.Rdata")
+
+total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2)) %>% group_by(Case) %>% 
+    summarise(n_0.05 = sum(adjusted.p < 0.05, na.rm = TRUE),
+              A_0.05 = mean(A[adjusted.p < 0.05], na.rm = TRUE),
+              min_0.05 = min(A[adjusted.p < 0.05], na.rm = TRUE),
+              max_0.05 = max(A[adjusted.p < 0.05], na.rm = TRUE),
+              n_0.01 = sum(adjusted.p < 0.01, na.rm = TRUE),
+              A_0.01 = mean(A[adjusted.p < 0.01]),
+              min_0.01 = min(A[adjusted.p < 0.05], na.rm = TRUE),
+              max_0.01 = max(A[adjusted.p < 0.05], na.rm = TRUE),
+              n_0.001 = sum(adjusted.p < 0.001, na.rm = TRUE),
+              A_0.001 = mean(A[adjusted.p < 0.001]),
+              min_0.001 = min(A[adjusted.p < 0.05], na.rm = TRUE),
+              max_0.001 = max(A[adjusted.p < 0.05], na.rm = TRUE),
+              n_0.0001 = sum(adjusted.p < 0.0001, na.rm = TRUE),
+              A_0.0001 = mean(A[adjusted.p < 0.0001], na.rm = TRUE),
+              min_0.0001 = min(A[adjusted.p < 0.05], na.rm = TRUE),
+              max_0.0001 = max(A[adjusted.p < 0.05], na.rm = TRUE))
+
+total_ttest_result %>%mutate(A = 0.5*(estimate1 + estimate2)) %>% ggplot() + geom_boxplot(aes(x = Case, y = A)) + facet_grid(Method ~ .)
+total_ttest_result %>%mutate(A = 0.5*(estimate1 + estimate2)) %>% ggplot() + geom_violin(aes(x = Case, y = A)) + facet_grid(Method ~ .) +
+    geom_hline(yintercept = )
+
+# QN, Log2, withoutfilter upregulation and downregulation ----------------
+
 
 
 
@@ -915,40 +986,6 @@ area.list <- list(area.1, area.2, area.12)
 
 #  QN, Log2, with filter 50% upregulation and downregulation ---------------
 
-#for CLS-CLF: filter by 0.5
-# _greater 
-f.t.greater.CLF_CLS      <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/greaterfilter50QNttestCLF_CLS.txt", delim="\t")
-f.t.greater.Sphere_CLF   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/greaterfilter50QNttestCLF_Sphere.txt", delim="\t")
-f.t.greater.Sphere_CLS   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/greaterfilter50QNttestCLS_Sphere.txt", delim="\t")
-
-# _less 
-f.t.less.CLF_CLS      <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/lessfilter50QNttestCLF_CLS.txt", delim="\t")
-f.t.less.Sphere_CLF   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/lessfilter50QNttestCLF_Sphere.txt", delim="\t")
-f.t.less.Sphere_CLS   <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/result/Differential_Expression/upanddownseperatemeasure/lessfilter50QNttestCLS_Sphere.txt", delim="\t")
-
-
-
-
-# t.test with filter 
-
-
-# UP-regulation 
-f.t.greater.CLF_CLS <- f.t.greater.CLF_CLS %>% mutate(Case = "f.t.greater.CLF_CLS")
-f.t.greater.Sphere_CLF <- f.t.greater.Sphere_CLF %>% mutate(Case = "f.t.greater.Sphere_CLF")
-f.t.greater.Sphere_CLS <- f.t.greater.Sphere_CLS %>% mutate(Case = "f.t.greater.Sphere_CLS")
-total.f.t.greater <- bind_rows(f.t.greater.CLF_CLS, f.t.greater.Sphere_CLF, f.t.greater.Sphere_CLS)
-
-
-# DOWN-regulation 
-f.t.less.CLF_CLS <- f.t.less.CLF_CLS %>% mutate(Case = "f.t.less.CLF_CLS")
-f.t.less.Sphere_CLF <- f.t.less.Sphere_CLF %>% mutate(Case = "f.t.less.Sphere_CLF") 
-f.t.less.Sphere_CLS <- f.t.less.Sphere_CLS %>% mutate(Case = "f.t.less.Sphere_CLS") 
-total.f.t.less <- bind_rows(f.t.less.CLF_CLS, f.t.less.Sphere_CLF, f.t.less.Sphere_CLS)
-
-
-
-# group_with_filter 
-total_with_filter    <- bind_rows(total.f.t.greater, total.f.t.less)
 
 
 
@@ -1255,4 +1292,8 @@ area.list <- list(area.1, area.2, area.12)
 
 library(VennDiagram)
 draw.pairwise.venn(area1 = area.list[[1]], area2 = area.list[[2]], n12 = area.list[[3]], c("CLF_CLS", "Sphere_CLS"), lty = "blank")
+
+
+# Shiny -------------------------------------------------------------------
+
 

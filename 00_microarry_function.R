@@ -251,3 +251,11 @@ searchHarmonizome <- function(genelist){
     
 }
 
+
+# browseDEresult ----------------------------------------------------------
+
+browseDEresult <- function(){
+    
+}
+
+

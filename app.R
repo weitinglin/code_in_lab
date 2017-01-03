@@ -54,7 +54,7 @@ load("/Users/Weitinglin/Documents/Repository/code_in_lab/total_probe_dataframe.R
 
 
 ui <- tagList( 
-   
+# Page:Project ------------------------------------------------------------
     navbarPage(title = "Project",
         tabPanel(
             title = "Introduction",
@@ -62,12 +62,16 @@ ui <- tagList(
                    includeMarkdown("DESCRIPTION.md")
                    )
         ),
+
+# Page:Workflow -----------------------------------------------------------
         tabPanel(
             title = "Workflow",
             img(src="workflow.png")
         ),
+
+# Page:Result Overview ----------------------------------------------------
         tabPanel(
-          title = "Result",
+          title = "Result Overview",
           fluidRow(
               column(1),
               column(11,selectInput(inputId = "Result.filter",
@@ -93,13 +97,17 @@ ui <- tagList(
               column(1),
               column(11,plotOutput(outputId = "Result.MAplot")))
         ),
+
+# Page:Gene ---------------------------------------------------------------
+
+
         tabPanel(
             title = "Gene",
             fluidRow(
                 column(1),
                 column(3,selectInput(inputId = "Gene.filter",
                                       label = "Pre-filter before the t-test:",
-                                      choices = c("Nofilter" = "Nofilter","Filter by variance at 50%"="Filter")),
+                                      choices = c("Nofilter" = "Nofilter","Filter by variance at 50%"="Filter"))),
                 column(4,sliderInput(inputId = "Gene.A.upper",
                                             label = "Filter with expression level(A) post ttest: Lower than",
                                             min = 1, max = 12, step = 0.5, value = 12)),
@@ -107,10 +115,47 @@ ui <- tagList(
                                             label = "Filter with expression level(A) post ttest: Larger than",
                                             min = 1, max = 12, step = 0.5, value = 1))
             ),
-            fluidRow(dataTableOutput(outputId = "queryResult")))
+            fluidRow(
+                     column(1),
+                     column(3,selectInput(inputId = "Gene.p",
+                                          label = "Filter with p value",
+                                          choices = c("0.05"  = 0.05,
+                                                      "0.01"  = 0.01,
+                                                      "0.001" = 0.001))),
+                     column(4,sliderInput(inputId = "Gene.M.upper",
+                                          label = "Filter with fold change(M) post ttest: Larger than",
+                                          min = -10, max = 12, step = 0.5, value = 1)),
+                     column(4,sliderInput(inputId = "Gene.M.lower",
+                                          label = "Filter with fold change(M) post ttest: Lower than",
+                                          min = -10, max = 12, step = 0.5, value = -1))
+                     ),
+            fluidRow(
+                column(1),
+                column(6,selectInput(inputId = "Gene.case",
+                                         label = "Multiple choose the inspect case",
+                                         choices = c("P6-Sphere > P6+fibroblast",
+                                                     "P6-Sphere < P6+fibroblast",
+                                                     "P6-Sphere > p6",
+                                                     "P6-Sphere < p6",
+                                                     "P6+fibroblast > p6",
+                                                     "P6+fibroblast < p6")
+                                        ))
+            ),
+            fluidRow(
+                column(3,helpText('The Number of DE probe')),
+                column(9,verbatimTextOutput('Gene.number'))
+            ),
+            fluidRow(
+                column(3, plotOutput(outputId = "Gene.MAplot"))
+                # column(9,dataTableOutput(outputId = "Gene.query"))
+                )
+            )
         ) 
     )
-)
+
+
+
+
 
 
 # SERVER part -------------------------------------------------------------
@@ -121,7 +166,10 @@ server <- function(input, output){
     output$Result.table <- renderDataTable({
         total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2)) %>% group_by(Case) %>% 
             filter(Method == input$Result.filter) %>%
-            filter(!Case %in% c ("P6-Sphere > P6+fibroblast","P6-Sphere < P6+fibroblast", "P6-Sphere < P6+fibroblast nofilter", "P6-Sphere > P6+fibroblast nofilter")) %>% 
+            filter(!Case %in% c ("P6-Sphere > P6+fibroblast",
+                                 "P6-Sphere < P6+fibroblast",
+                                 "P6-Sphere < P6+fibroblast",
+                                 "P6-Sphere > P6+fibroblast")) %>% 
             filter(A < input$Result.A.upper) %>%
             filter(A > input$Result.A.lower) %>%
             summarise(n_0.05 = sum(adjusted.p < 0.05, na.rm = TRUE),
@@ -150,10 +198,43 @@ server <- function(input, output){
             geom_vline(xintercept = input$Result.A.lower)
     })
     
-    output$queryResult <-  renderDataTable({
-        searchHarmonizome(c("CD44","ALDH1A3","CD9","CDKN2A","DPP4","HSPB1","KIT","NANOG"))
+    output$Gene.MAplot <- renderPlot({
+        total_ttest_result %>%
+            filter(Case %in% input$Gene.case) %>%
+            mutate(A = 0.5*(estimate1 + estimate2),
+                                      M = estimate1 - estimate2,
+                                      P = cut(adjusted.p, c(0,0.0001,0.001,0.01,0.05,1),c("p<0.0001","p<0.001","p<0.01","p<0.05","p>0.05"))) %>% ggplot() +
+            geom_point(aes(x = A, y = M, colour=P), alpha = 0.5) +
+            facet_grid(Method ~ Case) +
+            geom_vline(xintercept = input$Gene.A.upper) +
+            geom_vline(xintercept = input$Gene.A.lower) +
+            geom_hline(yintercept = input$Gene.M.upper) +
+            geom_hline(yintercept = input$Gene.M.lower) 
     })
     
+    tmp <- reactive({
+        total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2),
+                                      M = estimate1 - estimate2) %>%  
+            filter(Method == input$Gene.filter) %>%
+            filter(Case == input$Gene.case) %>%
+            filter(adjusted.p < input$Gene.p) %>%
+            filter(A < input$Gene.A.upper) %>%
+            filter(A > input$Gene.A.lower) %>%
+            filter(M > input$Gene.M.upper | M < input$Gene.M.lower) 
+    })
+    
+    gene.list <- reactive({
+        unname(getSYMBOL(tmp()$gene,"hgu133plus2.db"))  
+    })
+    
+    # output$Gene.query <-  renderDataTable({
+    #     searchHarmonizome(gene.list()[!is.na(gene.list())])
+    # })
+    
+    output$Gene.number <- renderPrint({
+        gene.list()[!is.na(gene.list())] %>% cat
+       
+    })
     
     
     
