@@ -1,4 +1,4 @@
-
+  
 # Loading package ---------------------------------------------------------
 library(affy) #
 library(GEOquery) #
@@ -26,6 +26,7 @@ library(pryr)
 library(affyPLM)
 library(httr)
 library(rjson)
+library(DT)
 #bioconductor
 source("https://bioconductor.org/biocLite.R")
 
