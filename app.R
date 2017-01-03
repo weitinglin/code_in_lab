@@ -235,8 +235,12 @@ server <- function(input, output){
     # })
     
     output$Gene.number <- renderDataTable({
-        data.frame(Probe = probe.list(),
-                   Symbole = gene.list())
+        DT::datatable(data.frame(Probe = probe.list(),
+                   Symbole = gene.list()),
+                   options = list(
+                       lengthMenu = list(c(2, 15, -1), c("2", "15", "All")),
+                       pageLength = 15
+                   ))
        
     })
     
