@@ -133,9 +133,7 @@ ui <- tagList(
                 column(1),
                 column(6,selectInput(inputId = "Gene.case",
                                          label = "Multiple choose the inspect case",
-                                         choices = c("P6-Sphere > P6+fibroblast",
-                                                     "P6-Sphere < P6+fibroblast",
-                                                     "P6-Sphere > p6",
+                                         choices = c("P6-Sphere > p6",
                                                      "P6-Sphere < p6",
                                                      "P6+fibroblast > p6",
                                                      "P6+fibroblast < p6")
