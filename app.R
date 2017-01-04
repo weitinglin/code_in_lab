@@ -135,8 +135,8 @@ ui <- tagList(
                                          label = "Multiple choose the inspect case",
                                          choices = c("P6-Sphere > p6",
                                                      "P6-Sphere < p6",
-                                                     "P6+fibroblast > p6",
-                                                     "P6+fibroblast < p6")
+                                                     "P6+fibroblast > P6",
+                                                     "P6+fibroblast < P6")
                                         ))
             ),
             fluidRow(column(12)),
