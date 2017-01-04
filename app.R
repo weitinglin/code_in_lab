@@ -166,7 +166,7 @@ ui <- tagList(
 
 
 server <- function(input, output){
-    
+# Output$Result.table -----------------------------------------------------
     output$Result.table <- renderDataTable({
         total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2)) %>% group_by(Case) %>% 
             filter(Method == input$Result.filter) %>%
@@ -181,7 +181,7 @@ server <- function(input, output){
                       n_0.001 = sum(adjusted.p < 0.001, na.rm = TRUE),
                       n_0.0001 = sum(adjusted.p < 0.0001, na.rm = TRUE))
     })
-    
+# Output$Result.plot ------------------------------------------------------ 
     output$Result.plot <- renderPlot({
         total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2)) %>% ggplot() +
             geom_violin(aes(x = Case, y = A)) +
@@ -191,7 +191,8 @@ server <- function(input, output){
             
         
     })
-    
+
+# Output$Result.MAplot ----------------------------------------------------
     output$Result.MAplot <- renderPlot({
         total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2),
                                       M = estimate1 - estimate2,
@@ -201,7 +202,9 @@ server <- function(input, output){
             geom_vline(xintercept = input$Result.A.upper) +
             geom_vline(xintercept = input$Result.A.lower)
     })
-    
+
+
+# Output$Gene.MAplot ------------------------------------------------------
     output$Gene.MAplot <- renderPlot({
         total_ttest_result %>%
             filter(Case %in% input$Gene.case) %>%
@@ -215,7 +218,10 @@ server <- function(input, output){
             geom_hline(yintercept = input$Gene.M.upper) +
             geom_hline(yintercept = input$Gene.M.lower) 
     })
-    
+
+# Reactive data -----------------------------------------------------------
+
+
     tmp <- reactive({
         total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2),
                                       M = estimate1 - estimate2) %>%  
@@ -237,7 +243,7 @@ server <- function(input, output){
     # output$Gene.query <-  renderDataTable({
     #     searchHarmonizome(gene.list()[!is.na(gene.list())])
     # })
-    
+# Output$Gene.number ------------------------------------------------------  
     output$Gene.number <- renderDataTable({
         DT::datatable(data.frame(Probe = probe.list(),
                    Symbol = gene.list()),
@@ -251,6 +257,15 @@ server <- function(input, output){
     
     
     }
+
+
+
+
+
+
+
+
+
 
 
 
