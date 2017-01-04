@@ -82,10 +82,10 @@ ui <- tagList(
               column(1),
               column(5,sliderInput(inputId = "Result.A.upper",
                                     label = "Filter with expression level(A) post ttest: Lower than",
-                                    min = 1, max = 12, step = 0.5, value = 12)),
+                                    min = 1, max = 15, step = 0.5, value = 15)),
               column(5,sliderInput(inputId = "Result.A.lower",
                                     label = "Filter with expression level(A) post ttest: Larger than",
-                                    min = 1, max = 12, step = 0.5, value = 1))
+                                    min = 0, max = 15, step = 0.5, value = 0))
           ),
           fluidRow(
               column(1),
@@ -98,7 +98,7 @@ ui <- tagList(
               column(11,plotOutput(outputId = "Result.MAplot")))
         ),
 
-# Page:Gene ---------------------------------------------------------------
+# Page:DE Gene Overview ---------------------------------------------------------------
 
 
         tabPanel(
@@ -110,10 +110,10 @@ ui <- tagList(
                                       choices = c("Nofilter" = "Nofilter","Filter by variance at 50%"="Filter"))),
                 column(4,sliderInput(inputId = "Gene.A.upper",
                                             label = "Filter with expression level(A) post ttest: Lower than",
-                                            min = 1, max = 12, step = 0.5, value = 12)),
+                                            min = 1, max = 15, step = 0.5, value = 15)),
                 column(4,sliderInput(inputId = "Gene.A.lower",
                                             label = "Filter with expression level(A) post ttest: Larger than",
-                                            min = 1, max = 12, step = 0.5, value = 1))
+                                            min = 0, max = 15, step = 0.5, value = 0))
             ),
             fluidRow(
                      column(1),
@@ -143,8 +143,8 @@ ui <- tagList(
             fluidRow(
                 #column(3,helpText('The Number of DE probe')),
                 column(1),
-                column(3, plotOutput(outputId = "Gene.MAplot")),
-                column(6, dataTableOutput('Gene.number')),
+                column(5, plotOutput(outputId = "Gene.MAplot")),
+                column(4, dataTableOutput('Gene.number')),
                 column(2)
             ),
             fluidRow(
