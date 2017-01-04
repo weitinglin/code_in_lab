@@ -146,12 +146,13 @@ ui <- tagList(
                 #column(3,helpText('The Number of DE probe')),
                 column(1),
                 column(3, plotOutput(outputId = "Gene.MAplot")),
-                column(6,dataTableOutput('Gene.number')),
+                column(6, dataTableOutput('Gene.number')),
                 column(2)
             ),
             fluidRow(
+                  verbatimTextOutput(outputId = "Gene.select")
                  #column(3, plotOutput(outputId = "Gene.MAplot"))
-                # column(9,dataTableOutput(outputId = "Gene.query"))
+                 #column(9,dataTableOutput(outputId = "Gene.query"))
                 )
             )
         ) 
@@ -253,10 +254,21 @@ server <- function(input, output){
                    ))
        
     })
-    
+# Output$Gene.select ------------------------------------------------------
+   output$Gene.select <- renderPrint({
+      s <- input$Gene.number_rows_selected
+      if (length(s)){
+          cat('Thess rows were selected:\n\n')
+          cat(s, sep=',')
+      }
+   })
+        
     
     
     }
+
+
+
 
 
 
