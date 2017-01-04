@@ -102,7 +102,7 @@ ui <- tagList(
 
 
         tabPanel(
-            title = "Gene",
+            title = "DE Gene Overview",
             fluidRow(
                 column(1),
                 column(3,selectInput(inputId = "Gene.filter",
@@ -247,9 +247,10 @@ server <- function(input, output){
 # Output$Gene.number ------------------------------------------------------  
     output$Gene.number <- renderDataTable({
         DT::datatable(data.frame(Probe = probe.list(),
-                   Symbol = gene.list()),
+                   Symbol = gene.list(),
+                   Adjusted.p = tmp()$adjusted.p),
                    options = list(
-                       lengthMenu = list(c(2, 15, -1), c("2", "15", "All")),
+                       lengthMenu = list(c(3, 15, -1), c("3", "15", "All")),
                        pageLength = 15
                    ))
        
