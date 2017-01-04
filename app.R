@@ -61,13 +61,13 @@ ui <- tagList(
             column(12,
                    includeMarkdown("DESCRIPTION.md")
                    )
-        ),
+          ),
 
 # Page:Workflow -----------------------------------------------------------
         tabPanel(
             title = "Workflow",
             img(src="workflow.png")
-        ),
+           ),
 
 # Page:Result Overview ----------------------------------------------------
         tabPanel(
@@ -96,7 +96,7 @@ ui <- tagList(
           fluidRow(
               column(1),
               column(11,plotOutput(outputId = "Result.MAplot")))
-        ),
+           ),
 
 # Page:DE Gene Overview ---------------------------------------------------------------
 
@@ -114,7 +114,7 @@ ui <- tagList(
                 column(4,sliderInput(inputId = "Gene.A.lower",
                                             label = "Filter with expression level(A) post ttest: Larger than",
                                             min = 0, max = 15, step = 0.5, value = 0))
-            ),
+               ),
             fluidRow(
                      column(1),
                      column(3,selectInput(inputId = "Gene.p",
@@ -128,7 +128,7 @@ ui <- tagList(
                      column(4,sliderInput(inputId = "Gene.M.lower",
                                           label = "Filter with fold change(M) post ttest: Lower than",
                                           min = -10, max = 12, step = 0.5, value = -1))
-                     ),
+                ),
             fluidRow(
                 column(1),
                 column(6,selectInput(inputId = "Gene.case",
@@ -138,7 +138,7 @@ ui <- tagList(
                                                      "P6+fibroblast > P6",
                                                      "P6+fibroblast < P6")
                                         ))
-            ),
+               ),
             fluidRow(column(12)),
             fluidRow(
                 #column(3,helpText('The Number of DE probe')),
@@ -146,7 +146,7 @@ ui <- tagList(
                 column(5, plotOutput(outputId = "Gene.MAplot")),
                 column(4, dataTableOutput('Gene.number')),
                 column(2)
-            ),
+               ),
             fluidRow(
                   verbatimTextOutput(outputId = "Gene.select")
                  #column(3, plotOutput(outputId = "Gene.MAplot"))
@@ -154,8 +154,10 @@ ui <- tagList(
                 ),
             fluidRow(
                 dataTableOutput(outputId = "Gene.query")
-            )
-            )
+               )
+            ),
+        tabPanel(title = "Fibroblast caused DE gene related to stemness",
+            fluidRow())
         ) 
     )
 
