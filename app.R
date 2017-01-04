@@ -153,7 +153,10 @@ ui <- tagList(
                   verbatimTextOutput(outputId = "Gene.select")
                  #column(3, plotOutput(outputId = "Gene.MAplot"))
                  #column(9,dataTableOutput(outputId = "Gene.query"))
-                )
+                ),
+            fluidRow(
+                dataTableOutput(outputId = "Gene.query")
+            )
             )
         ) 
     )
@@ -242,9 +245,7 @@ server <- function(input, output){
     probe.list <- reactive({
         names(getSYMBOL(tmp()$gene,"hgu133plus2.db"))
     })
-    # output$Gene.query <-  renderDataTable({
-    #     searchHarmonizome(gene.list()[!is.na(gene.list())])
-    # })
+
 # Output$Gene.number ------------------------------------------------------  
     output$Gene.number <- renderDataTable({
         DT::datatable(data.frame(Probe = probe.list(),
@@ -264,8 +265,16 @@ server <- function(input, output){
       }
    })
         
-    
-    
+
+# Output$Gene.query -------------------------------------------------------
+    output$Gene.query <-  renderDataTable({
+        s <- input$Gene.number_rows_selected
+        if (length(s)){
+            searchHarmonizome(gene.list()[s])
+            }
+        
+    })
+
     }
 
 
