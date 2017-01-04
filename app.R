@@ -209,6 +209,7 @@ server <- function(input, output){
     output$Gene.MAplot <- renderPlot({
         total_ttest_result %>%
             filter(Case %in% input$Gene.case) %>%
+            filter(Method == input$Gene.filter) %>% 
             mutate(A = 0.5*(estimate1 + estimate2),
                                       M = estimate1 - estimate2,
                                       P = cut(adjusted.p, c(0,0.0001,0.001,0.01,0.05,1),c("p<0.0001","p<0.001","p<0.01","p<0.05","p>0.05"))) %>% ggplot() +
