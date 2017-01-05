@@ -174,7 +174,15 @@ ui <- tagList(
                  #column(9,dataTableOutput(outputId = "Gene.query"))
                 ),
             fluidRow(
-                dataTableOutput(outputId = "Gene.panther")
+                column(1),
+                column(10,dataTableOutput(outputId = "Gene.gprofiler")),
+                column(1)
+            ),
+            fluidRow(
+                column(1),
+                column(5,dataTableOutput(outputId = "Gene.panther")),
+                column(5,dataTableOutput(outputId = "Gene.pathway")),
+                column(1)
             ),
             fluidRow(
                 dataTableOutput(outputId = "Gene.query")
@@ -313,9 +321,27 @@ server <- function(input, output){
             }
         
     })
+    
+# Output$Gene.profiler ----------------------------------------------------    
+    output$Gene.gprofiler <- renderDataTable({
+        
+        gprofiler(query = probe.list(),
+                  organism = "hsapiens",
+                  ordered_query = T,
+                  max_set_size = 1000,
+                  min_isect_size = 0,
+                  significant = T,
+                  exclude_iea = T,
+                  underrep = T,
+                  correction_method = "fdr",
+                  hier_filtering = "moderate",
+                  custom_bg = hgu133plus2.probe)
+    })    
+    
+    
 # Output$Gene.panther -----------------------------------------------------
     panther.result <- reactive({
-       
+        
         panther.probe <-probe.list()
         tmp <- annotated.entrez.symbol %>% filter(Probe %in% panther.probe)
         tmp.EntrezID <- tmp$EntrezID[!is.na(tmp$EntrezID)]
@@ -327,14 +353,44 @@ server <- function(input, output){
                keytype = "ENTREZ")   
     })
       
+    panther.pathway <- reactive({
+        
+        panther.probe <-probe.list()
+        tmp <- annotated.entrez.symbol %>% filter(Probe %in% panther.probe)
+        tmp.EntrezID <- tmp$EntrezID[!is.na(tmp$EntrezID)]
+        k <- tmp.EntrezID
+        choice <- c("PATHWAY_TERM")
+        PANTHER.db::select(PANTHER.db,
+                           keys = k,
+                           columns = choice,
+                           keytype = "ENTREZ")   
+    })
     
      output$Gene.panther <- renderDataTable({
          
          #panther.result() %>% filter(!is.na(CLASS_TERM)) %>% ggplot + geom_bar(aes(x = CLASS_TERM)) + coord_polar(theta = "x", direction=1)
-         panther.result()$CLASS_TERM %>% table %>% sort() %>% as.data.frame
+         panther.result()$CLASS_TERM %>% table %>% sort() %>% as.data.frame %>% arrange(desc(Freq))
      })
+     # Output$Gene.pathway -----------------------------------------------------    
+     output$Gene.pathway <- renderDataTable({
+         
+         #panther.result() %>% filter(!is.na(CLASS_TERM)) %>% ggplot + geom_bar(aes(x = CLASS_TERM)) + coord_polar(theta = "x", direction=1)
+         panther.pathway()$PATHWAY_TERM %>% table %>% sort() %>% as.data.frame %>% arrange(desc(Freq))
+     })
+     
     
+     
+     
+     
+     
+     
     }
+
+
+
+
+
+
 
 
 
