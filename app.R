@@ -174,7 +174,7 @@ ui <- tagList(
                  #column(9,dataTableOutput(outputId = "Gene.query"))
                 ),
             fluidRow(
-                plotOutput(outputId = "Gene.panther")
+                dataTableOutput(outputId = "Gene.panther")
             ),
             fluidRow(
                 dataTableOutput(outputId = "Gene.query")
@@ -328,10 +328,10 @@ server <- function(input, output){
     })
       
     
-     output$Gene.panther <- renderPlot({
+     output$Gene.panther <- renderDataTable({
          
-         panther.result() %>% filter(!is.na(CLASS_TERM)) %>% ggplot + geom_bar(aes(x = CLASS_TERM)) + coord_polar(theta = "x", direction=1)
-         
+         #panther.result() %>% filter(!is.na(CLASS_TERM)) %>% ggplot + geom_bar(aes(x = CLASS_TERM)) + coord_polar(theta = "x", direction=1)
+         panther.result()$CLASS_TERM %>% table %>% sort() %>% as.data.frame
      })
     
     }
