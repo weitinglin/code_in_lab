@@ -100,8 +100,9 @@ ui <- tagList(
                                    min = -10, max = 12, step = 0.5, value = 0))
           ),
           fluidRow(
-              column(1),
-              column(11, actionButton(inputId = "Result.go",label = "Calculate!"))
+              column(5),
+              column(1, actionButton(inputId = "Result.go",label = "Calculate!")),
+              column(2,helpText('調整完條件後，按Calculate鈕！'))
           ),
           fluidRow(
               column(1),
@@ -157,7 +158,6 @@ ui <- tagList(
                ),
             fluidRow(column(12)),
             fluidRow(
-                #column(3,helpText('The Number of DE probe')),
                 column(1),
                 column(5, plotOutput(outputId = "Gene.MAplot")),
                 column(4, dataTableOutput('Gene.number')),
