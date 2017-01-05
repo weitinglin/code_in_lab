@@ -265,14 +265,15 @@ server <- function(input, output){
 
 
     tmp <- reactive({
-        total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2),
+        input$Gene.go
+        isolate(total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2),
                                       M = estimate1 - estimate2) %>%  
             filter(Method == input$Gene.filter) %>%
             filter(Case == input$Gene.case) %>%
             filter(adjusted.p < input$Gene.p) %>%
             filter(A < input$Gene.A.upper) %>%
             filter(A > input$Gene.A.lower) %>%
-            filter(M > input$Gene.M.upper | M < input$Gene.M.lower) 
+            filter(M > input$Gene.M.upper | M < input$Gene.M.lower) )
     })
     
     gene.list <- reactive({
@@ -285,16 +286,13 @@ server <- function(input, output){
 
 # Output$Gene.number ------------------------------------------------------  
     output$Gene.number <- renderDataTable({
-    #use the action button
-       input$Gene.go
-    #use isolate to remove the depedency
-       isolate( DT::datatable(data.frame(Probe = probe.list(),
+       DT::datatable(data.frame(Probe = probe.list(),
                    Symbol = gene.list(),
                    Adjusted.p = tmp()$adjusted.p),
                    options = list(
                        lengthMenu = list(c(3, 15, -1), c("3", "15", "All")),
                        pageLength = 15
-                   )))
+                   ))
        
     })
 # Output$Gene.select ------------------------------------------------------
@@ -331,7 +329,7 @@ server <- function(input, output){
       
     
      output$Gene.panther <- renderPlot({
-         panther.result() %>% ggplot + geom_bar(aes(x = CLASS_TERM)) + coord_polar(theta = "x", direction=1)
+         panther.result() %>% filter(!is.na(CLASS_TERM)) %>% ggplot + geom_bar(aes(x = CLASS_TERM)) #+ coord_polar(theta = "x", direction=1)
      })
     
     }
