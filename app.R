@@ -6,6 +6,7 @@ load("/Users/Weitinglin/Documents/Repository/code_in_lab/total_ttest_result.Rdat
 load("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/data/intermediate/hgu133plus2.RData")
 load("/Users/Weitinglin/Documents/Repository/code_in_lab/total_probe_dataframe.Rdata")
 load("/Users/Weitinglin/Documents/Repository/code_in_lab/annotated_entrez_symbol.Rdata")
+load("/Users/Weitinglin/Documents/Repository/code_in_lab/hgu133plus2_annotation.RData")
 pthOrganisms(PANTHER.db) <- "HUMAN"
 
 
@@ -495,7 +496,8 @@ server <- function(input, output){
      
      output$Final.up.result <- renderDataTable({
          
-         annotated.entrez.symbol %>% filter(Probe %in% intersect(up.CLF_CLS(), up.Sphere_CLS()))
+         left_join(annotated.entrez.symbol, hgu133plus2.probe.annotate[,c("Probe", "name", "description")]) %>%
+         filter(Probe %in% intersect(up.CLF_CLS(), up.Sphere_CLS()))
      })
      
      
@@ -504,7 +506,7 @@ server <- function(input, output){
      
      output$Final.down.result <- renderDataTable({
          
-         annotated.entrez.symbol %>% filter(Probe %in% intersect(down.CLF_CLS(), down.Sphere_CLS()))
+         left_join(annotated.entrez.symbol, hgu133plus2.probe.annotate[,c("Probe", "name", "description")]) %>% filter(Probe %in% intersect(down.CLF_CLS(), down.Sphere_CLS()))
      })
      
      
