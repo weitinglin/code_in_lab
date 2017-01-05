@@ -229,13 +229,15 @@ ui <- tagList(
                  ),
                 fluidRow(
                 column(1),
-                column(10,plotOutput(outputId = "Final.venn.up")),
+                column(5,plotOutput(outputId = "Final.venn.up")),
+                column(5,plotOutput(outputId = "Final.venn.down")),
                 column(1)
                 
                 ),
                 fluidRow(
                     column(1),
-                    column(10,plotOutput(outputId = "Final.venn.down")),
+                    column(5,dataTableOutput(outputId = "Final.up.result")),
+                    column(5,dataTableOutput(outputId = "Final.down.result")),
                     column(1)
                     
                 )
@@ -489,14 +491,29 @@ server <- function(input, output){
                             fill = c("Blue", "Red"))
      })
      
+     # Output$Final.up.result --------------------------------------------------
+     
+     output$Final.up.result <- renderDataTable({
+         
+         annotated.entrez.symbol %>% filter(Probe %in% intersect(up.CLF_CLS(), up.Sphere_CLS()))
+     })
      
      
+     
+     # Output$Final.down.result ------------------------------------------------
+     
+     output$Final.down.result <- renderDataTable({
+         
+         annotated.entrez.symbol %>% filter(Probe %in% intersect(down.CLF_CLS(), down.Sphere_CLS()))
+     })
      
      
      
      
      
     }
+
+
 
 
 
