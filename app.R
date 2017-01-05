@@ -1,4 +1,5 @@
 library(shiny)
+library(plotly)
 library(PANTHER.db)
 library(GO.db)
 source("/Users/Weitinglin/Documents/Repository/code_in_lab/00_microarry_function.R")
@@ -241,6 +242,9 @@ ui <- tagList(
                     column(5,dataTableOutput(outputId = "Final.down.result")),
                     column(1)
                     
+                ),
+                fluidRow(
+                    plotlyOutput(outputId = "Final.3d")
                 )
             )
         ) 
@@ -509,11 +513,18 @@ server <- function(input, output){
          left_join(annotated.entrez.symbol%>%select(-Symbol), hgu133plus2.probe.annotate[,c("Probe", "name", "description")]) %>% filter(Probe %in% intersect(down.CLF_CLS(), down.Sphere_CLS()))
      })
      
+     # Output$Final.3d ---------------------------------------------------------
+     output$Final.3d <- renderPlotly({
+         plot_ly(mtcars, x = ~mpg, y = ~wt)
+         
+     })
      
      
      
-     
-    }
+}
+
+
+
 
 
 
