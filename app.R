@@ -1,8 +1,22 @@
 library(shiny)
+library(gProfileR)
 library(plotly)
 library(PANTHER.db)
 library(RColorBrewer)
-library(GO.db)
+library(ggplot2)
+library(dplyr)
+library(annotate)
+library(hgu133plus2.db)
+library(readr)
+library(latticeExtra)
+library(purrr)
+library(rprojroot)
+library(markdown)
+library(tidyr)
+library(httr)
+library(rjson)
+library(DT)
+library(VennDiagram)
 source("00_microarry_function.R")
 load("total_ttest_result.Rdata")
 load("hgu133plus2.RData")
@@ -10,7 +24,7 @@ load("total_probe_dataframe.Rdata")
 load("annotated_entrez_symbol.Rdata")
 load("hgu133plus2_annotation.RData")
 load("Exprs_data.RData")
-pthOrganisms(PANTHER.db) <- "HUMAN"
+#pthOrganisms(PANTHER.db) <- "HUMAN"
 
 
 # Preprocess --------------------------------------------------------------

@@ -1,34 +1,10 @@
   
 # Loading package ---------------------------------------------------------
-library(affy) #
-library(GEOquery) #
-library(hgu133plus2cdf) #
-library(ggplot2)
-library(dplyr)
-library(limma)
-library(annotate)
-library(hgu133plus2.db)
-library(affy)
-library(genefilter)
-library(ClassComparison)
-library(readr)
-library(qvalue)
-library(broom)
-library(latticeExtra)
-library(vsn)
-library(GO.db)
-library(foreach) #selective
-library(doParallel) #selective
-library(purrr)
-library(rprojroot)
-library(tidyr)
-library(pryr)
-library(affyPLM)
-library(httr)
-library(rjson)
-library(DT)
+#library(affy) #
+#library(GEOquery) #
+#library(hgu133plus2cdf) #
 #bioconductor
-source("https://bioconductor.org/biocLite.R")
+#source("https://bioconductor.org/biocLite.R")
 
 #Phenodata and load the celfile
 #data.path  <- file.path("/Users/Weitinglin/Documents/2016 實驗室資料處理/201510 microarray/raw data 20100114/set 8 CLS CLF Sphere")
