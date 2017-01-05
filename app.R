@@ -315,21 +315,23 @@ server <- function(input, output){
     })
 # Output$Gene.panther -----------------------------------------------------
     panther.result <- reactive({
-        s <- input$Gene.number_row_selected
-        panther.probe <-probe.list()[s]
-        tmp <- annotated.entrez.symbol %>% filter(Probe  %in% panther.probe)
+       
+        panther.probe <-probe.list()
+        tmp <- annotated.entrez.symbol %>% filter(Probe %in% panther.probe)
         tmp.EntrezID <- tmp$EntrezID[!is.na(tmp$EntrezID)]
         k <- tmp.EntrezID
         choice <- c("CLASS_TERM")
         PANTHER.db::select(PANTHER.db,
                keys = k,
                columns = choice,
-               keytype = "ENTREZ")     
+               keytype = "ENTREZ")   
     })
       
     
      output$Gene.panther <- renderPlot({
-         panther.result() %>% filter(!is.na(CLASS_TERM)) %>% ggplot + geom_bar(aes(x = CLASS_TERM)) #+ coord_polar(theta = "x", direction=1)
+         
+         panther.result() %>% filter(!is.na(CLASS_TERM)) %>% ggplot + geom_bar(aes(x = CLASS_TERM)) + coord_polar(theta = "x", direction=1)
+         
      })
     
     }
