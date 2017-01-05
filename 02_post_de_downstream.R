@@ -719,7 +719,7 @@ annotate_the_ttest <- function(x){
 # Data input --------------------------------------------------------------
 
 
-# No filter ---------------------------------------------------------------
+# QN, Log2, No filter with direction  01---------------------------------------------------------------
 #for CLS-CLF: No filter
 # _greater
 
@@ -750,7 +750,7 @@ total.t.less <- bind_rows(t.less.CLF_CLS, t.less.Sphere_CLF, t.less.Sphere_CLS)
 total_without_filter <- bind_rows(total.t.greater, total.t.less)
 
 
-# Filter ------------------------------------------------------------------
+# QN, Log2, Filter, with direction 01------------------------------------------------------------------
 
 #for CLS-CLF: filter by 0.5
 # _greater 
@@ -811,11 +811,13 @@ total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2)) %>% group_by(Case
               min_0.0001 = min(A[adjusted.p < 0.05], na.rm = TRUE),
               max_0.0001 = max(A[adjusted.p < 0.05], na.rm = TRUE))
 
+#plot 
+
 total_ttest_result %>%mutate(A = 0.5*(estimate1 + estimate2)) %>% ggplot() + geom_boxplot(aes(x = Case, y = A)) + facet_grid(Method ~ .)
 total_ttest_result %>%mutate(A = 0.5*(estimate1 + estimate2)) %>% ggplot() + geom_violin(aes(x = Case, y = A)) + facet_grid(Method ~ .) +
     geom_hline(yintercept = )
 
-# QN, Log2, withoutfilter upregulation and downregulation ----------------
+# QN, Log2, No filter with direction 02 ----------------
 
 
 
@@ -984,7 +986,7 @@ area.12 <- length(intersect(down.CLF_CLS, down.Sphere_CLS))
 area.list <- list(area.1, area.2, area.12)
 
 
-#  QN, Log2, with filter 50% upregulation and downregulation ---------------
+#  QN, Log2, Filter with direction 02 ---------------
 
 
 
@@ -1141,7 +1143,14 @@ sum(is.na(subset$symbol))
 subset$symbol[!is.na(subset$symbol)] %>% unique%>% cat
 system("say finished")
 
-# 
+
+
+
+
+
+
+
+
 
 
 # Filter ------------------------------------------------------------------

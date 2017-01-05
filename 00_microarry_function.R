@@ -1,5 +1,6 @@
   
 # Loading package ---------------------------------------------------------
+library(gProfileR)
 library(affy) #
 library(GEOquery) #
 library(hgu133plus2cdf) #
@@ -27,6 +28,7 @@ library(affyPLM)
 library(httr)
 library(rjson)
 library(DT)
+library(VennDiagram)
 #bioconductor
 source("https://bioconductor.org/biocLite.R")
 

@@ -735,9 +735,18 @@ save(total.probe.data.frame, file = "total_probe_dataframe.Rdata")
 
 
 
+# Appendix: Annotation with PANTHER ---------------------------------------
+load("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/data/intermediate/hgu133plus2.RData")
 
+probe <- hgu133plus2.probe
+get(probe[1], env=hgu133plus2ENTREZID)
+entrezID <- unlist(lookUp(probe, "hgu133plus2.db", "ENTREZID"))
+symbol <- getSYMBOL(probe, "hgu133plus2.db")
+annotated.entrez.symbol <- data.frame(Probe = probe,
+                                      EntrezID = entrezID,
+                                      Symbol = symbol)
 
-
+save(annotated.entrez.symbol, file= "/Users/Weitinglin/Documents/Repository/code_in_lab/annotated_entrez_symbol.Rdata")
 # Post Filter Assessmnet --------------------------------------------------
 nofilter <- exprs(QN_CLF_CLS_eSet )
 nofilter <- as.data.frame(nofilter)
