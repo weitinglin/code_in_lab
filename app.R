@@ -334,6 +334,7 @@ server <- function(input, output){
                   exclude_iea = T,
                   underrep = T,
                   correction_method = "fdr",
+                  src_filter = c("GO:BP","REAC"),
                   hier_filtering = "moderate",
                   custom_bg = hgu133plus2.probe)
     })    
