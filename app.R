@@ -229,11 +229,17 @@ ui <- tagList(
                  ),
                 fluidRow(
                 column(1),
-                column(5,plotOutput(outputId = "Final.venn.up")),
-                column(5,plotOutput(outputId = "Final.venn.down")),
+                column(10,plotOutput(outputId = "Final.venn.up")),
                 column(1)
                 
-            ))
+                ),
+                fluidRow(
+                    column(1),
+                    column(10,plotOutput(outputId = "Final.venn.down")),
+                    column(1)
+                    
+                )
+            )
         ) 
     )
 
@@ -430,6 +436,7 @@ server <- function(input, output){
          isolate(total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2),
                                                M = estimate1 - estimate2) %>%  
                      filter(Method == input$Final.filter) %>%
+                     filter(adjusted.p < input$Final.p) %>%
                      filter(A < input$Final.A.upper) %>%
                      filter(A > input$Final.A.lower) %>%
                      filter(M > input$Final.M.upper | M < input$Final.M.lower) )
@@ -465,7 +472,9 @@ server <- function(input, output){
          area.2 <- length(up.Sphere_CLS())
          area.12 <- length(intersect(up.CLF_CLS(), up.Sphere_CLS()))
          area.list <- list(area.1, area.2, area.12)
-         draw.pairwise.venn(area1 = area.list[[1]], area2 = area.list[[2]], n12 = area.list[[3]], c("P6+fibroblast > P6", "P6-Sphere > p6"), lty = "blank")
+         draw.pairwise.venn(area1 = area.list[[1]], area2 = area.list[[2]], cross.area = area.list[[3]],
+                            category = c("P6+fibroblast > P6", "P6-Sphere > p6"),
+                            fill = c("Blue","Red"))
      })
        
          
@@ -475,7 +484,9 @@ server <- function(input, output){
          area.2 <- length(down.Sphere_CLS())
          area.12 <- length(intersect(down.CLF_CLS(), down.Sphere_CLS()))
          area.list <- list(area.1, area.2, area.12)
-         draw.pairwise.venn(area1 = area.list[[1]], area2 = area.list[[2]], n12 = area.list[[3]], c("P6+fibroblast < P6", "P6-Sphere < p6"), lty = "blank")
+         draw.pairwise.venn(area1 = area.list[[1]], area2 = area.list[[2]], cross.area = area.list[[3]],
+                            category = c("P6+fibroblast < P6", "P6-Sphere < p6"),
+                            fill = c("Blue", "Red"))
      })
      
      
