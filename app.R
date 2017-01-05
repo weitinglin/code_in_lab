@@ -245,6 +245,12 @@ ui <- tagList(
                      column(1, actionButton(inputId = "Final.go",label = "Calculate!")),
                      column(2,helpText('調整完條件後，按Calculate鈕！'))
                  ),
+                 fluidRow(
+                     column(1),
+                     column(5, helpText('Both Up regulation gene in P6+fibroblast and P6-sphere compare to P6 ')),
+                     column(5,helpText('Both Down regulation gene in P6+fibroblast and P6-sphere compare to P6')),
+                     column(1)
+                 ),
                 fluidRow(
                 column(1),
                 column(5,plotOutput(outputId = "Final.venn.up")),
