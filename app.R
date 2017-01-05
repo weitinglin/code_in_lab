@@ -101,6 +101,10 @@ ui <- tagList(
           ),
           fluidRow(
               column(1),
+              column(11, actionButton(inputId = "Result.go",label = "Calculate!"))
+          ),
+          fluidRow(
+              column(1),
               column(11,dataTableOutput(outputId = "Result.table"))),
           # fluidRow(
           #     column(1),
@@ -188,7 +192,10 @@ ui <- tagList(
 server <- function(input, output){
 # Output$Result.table -----------------------------------------------------
     output$Result.table <- renderDataTable({
-        total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2),
+        # tabke a dependency on action button
+        input$Result.go
+        # isolate to avoid dependency
+        isolate(total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2),
                                       M = estimate1 - estimate2) %>% group_by(Case) %>% 
             filter(Method == input$Result.filter) %>%
             filter(!Case %in% c ("P6-Sphere > P6+fibroblast",
@@ -201,7 +208,7 @@ server <- function(input, output){
             summarise(n_0.05 = sum(adjusted.p < 0.05, na.rm = TRUE),
                       n_0.01 = sum(adjusted.p < 0.01, na.rm = TRUE),
                       n_0.001 = sum(adjusted.p < 0.001, na.rm = TRUE),
-                      n_0.0001 = sum(adjusted.p < 0.0001, na.rm = TRUE))
+                      n_0.0001 = sum(adjusted.p < 0.0001, na.rm = TRUE)))
     })
 # # Output$Result.plot ------------------------------------------------------ 
 #     output$Result.plot <- renderPlot({
@@ -216,7 +223,11 @@ server <- function(input, output){
 
 # Output$Result.MAplot ----------------------------------------------------
     output$Result.MAplot <- renderPlot({
-        total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2),
+        # tabke a dependency on action button
+        input$Result.go
+        # isolate to avoid dependency
+        
+        isolate(total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2),
                                       M = estimate1 - estimate2,
                                       P = cut(adjusted.p, c(0,0.0001,0.001,0.01,0.05,1),c("p<0.0001","p<0.001","p<0.01","p<0.05","p>0.05"))) %>% ggplot() +
             geom_point(aes(x = A, y = M, colour=P), alpha = 0.5) +
@@ -224,7 +235,7 @@ server <- function(input, output){
             geom_vline(xintercept = input$Result.A.upper) +
             geom_vline(xintercept = input$Result.A.lower) +
             geom_hline(yintercept = input$Result.M.upper) +
-            geom_hline(yintercept = input$Result.M.lower)
+            geom_hline(yintercept = input$Result.M.lower))
             
     })
 
