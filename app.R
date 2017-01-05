@@ -1,8 +1,12 @@
 library(shiny)
+library(PANTHER.db)
+library(GO.db)
 source("/Users/Weitinglin/Documents/Repository/code_in_lab/00_microarry_function.R")
 load("/Users/Weitinglin/Documents/Repository/code_in_lab/total_ttest_result.Rdata")
 load("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/data/intermediate/hgu133plus2.RData")
 load("/Users/Weitinglin/Documents/Repository/code_in_lab/total_probe_dataframe.Rdata")
+load("/Users/Weitinglin/Documents/Repository/code_in_lab/annotated_entrez_symbol.Rdata")
+pthOrganisms(PANTHER.db) <- "HUMAN"
 
 
 # Preprocess --------------------------------------------------------------
@@ -46,7 +50,6 @@ load("/Users/Weitinglin/Documents/Repository/code_in_lab/total_probe_dataframe.R
 # 
 # 
 # total_ttest_result <- bind_rows(total_without_filter, total_with_filter)
-
 
 
 
@@ -153,8 +156,12 @@ ui <- tagList(
                  #column(9,dataTableOutput(outputId = "Gene.query"))
                 ),
             fluidRow(
+                plotOutput(outputId = "Gene.panther")
+            ),
+            fluidRow(
                 dataTableOutput(outputId = "Gene.query")
                )
+            
             ),
         tabPanel(title = "Fibroblast caused DE gene related to stemness",
             fluidRow())
@@ -275,13 +282,33 @@ server <- function(input, output){
             }
         
     })
-
+# Output$Gene.panther -----------------------------------------------------
+    panther.result <- reactive({
+        s <- input$Gene.number_row_selected
+        panther.probe <-probe.list()[s]
+        tmp <- annotated.entrez.symbol %>% filter(Probe  %in% panther.probe)
+        tmp.EntrezID <- tmp$EntrezID[!is.na(tmp$EntrezID)]
+        k <- tmp.EntrezID
+        choice <- c("CLASS_TERM")
+        PANTHER.db::select(PANTHER.db,
+               keys = k,
+               columns = choice,
+               keytype = "ENTREZ")     
+    })
+      
+    
+     output$Gene.panther <- renderPlot({
+         panther.result() %>% ggplot + geom_bar(aes(x = CLASS_TERM)) + coord_polar(theta = "x", direction=1)
+     })
+    
     }
 
 
 
 
 
+
+ 
 
 
 
