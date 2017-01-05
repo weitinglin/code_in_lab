@@ -267,6 +267,18 @@ ui <- tagList(
                 ),
                 fluidRow(
                     plotlyOutput(outputId = "Final.3d")
+                ),
+                fluidRow(
+                    column(1),
+                    column(5,dataTableOutput(outputId = "Final.up.panther")),
+                    column(5,dataTableOutput(outputId = "Final.down.panther")),
+                    column(1)
+                ),
+                fluidRow(
+                    column(1),
+                    column(5,dataTableOutput(outputId = "Final.up.pathway")),
+                    column(5,dataTableOutput(outputId = "Final.down.pathway")),
+                    column(1)
                 )
             )
         ) 
@@ -568,10 +580,101 @@ server <- function(input, output){
                                  zaxis = list(title = 'Sphere')))
          
      })
+     # Reactive data -----------------------------------------------------------
+     panther.up.result <- reactive({
+         
+         panther.probe <- intersect(up.CLF_CLS(), up.Sphere_CLS())
+         tmp <- annotated.entrez.symbol %>% filter(Probe %in% panther.probe)
+         tmp.EntrezID <- tmp$EntrezID[!is.na(tmp$EntrezID)]
+         k <- tmp.EntrezID
+         choice <- c("CLASS_TERM")
+         PANTHER.db::select(PANTHER.db,
+                            keys = k,
+                            columns = choice,
+                            keytype = "ENTREZ")   
+     })
      
+     panther.down.result <- reactive({
+         
+         panther.probe <-intersect(down.CLF_CLS(), down.Sphere_CLS())
+         tmp <- annotated.entrez.symbol %>% filter(Probe %in% panther.probe)
+         tmp.EntrezID <- tmp$EntrezID[!is.na(tmp$EntrezID)]
+         k <- tmp.EntrezID
+         choice <- c("CLASS_TERM")
+         PANTHER.db::select(PANTHER.db,
+                            keys = k,
+                            columns = choice,
+                            keytype = "ENTREZ")   
+     })
+     
+     panther.up.pathway <- reactive({
+         
+         panther.probe <- intersect(up.CLF_CLS(), up.Sphere_CLS())
+         tmp <- annotated.entrez.symbol %>% filter(Probe %in% panther.probe)
+         tmp.EntrezID <- tmp$EntrezID[!is.na(tmp$EntrezID)]
+         k <- tmp.EntrezID
+         choice <- c("PATHWAY_TERM")
+         PANTHER.db::select(PANTHER.db,
+                            keys = k,
+                            columns = choice,
+                            keytype = "ENTREZ")   
+     })
+     
+     panther.down.pathway <- reactive({
+         
+         panther.probe <-intersect(down.CLF_CLS(), down.Sphere_CLS())
+         tmp <- annotated.entrez.symbol %>% filter(Probe %in% panther.probe)
+         tmp.EntrezID <- tmp$EntrezID[!is.na(tmp$EntrezID)]
+         k <- tmp.EntrezID
+         choice <- c("PATHWAY_TERM")
+         PANTHER.db::select(PANTHER.db,
+                            keys = k,
+                            columns = choice,
+                            keytype = "ENTREZ")   
+     })
+     # Output$Final.up.panther -------------------------------------------------
+     output$Final.up.panther <- renderDataTable({
+         
+         #panther.result() %>% filter(!is.na(CLASS_TERM)) %>% ggplot + geom_bar(aes(x = CLASS_TERM)) + coord_polar(theta = "x", direction=1)
+         panther.up.result()$CLASS_TERM %>% table %>% sort() %>% as.data.frame %>% arrange(desc(Freq))
+     })
+     # Output$Final.down.panther -----------------------------------------------
+     output$Final.down.panther <- renderDataTable({
+         
+         #panther.result() %>% filter(!is.na(CLASS_TERM)) %>% ggplot + geom_bar(aes(x = CLASS_TERM)) + coord_polar(theta = "x", direction=1)
+         panther.down.result()$CLASS_TERM %>% table %>% sort() %>% as.data.frame %>% arrange(desc(Freq))
+     })
+     # Output$Final.up.pathway -------------------------------------------------
+     
+     output$Final.up.pathway <- renderDataTable({
+         
+         #panther.result() %>% filter(!is.na(CLASS_TERM)) %>% ggplot + geom_bar(aes(x = CLASS_TERM)) + coord_polar(theta = "x", direction=1)
+         panther.up.pathway()$PATHWAY_TERM %>% table %>% sort() %>% as.data.frame %>% arrange(desc(Freq))
+     })
+     # Output$Final.down.pathway -----------------------------------------------
+     output$Final.down.pathway <- renderDataTable({
+         
+         #panther.result() %>% filter(!is.na(CLASS_TERM)) %>% ggplot + geom_bar(aes(x = CLASS_TERM)) + coord_polar(theta = "x", direction=1)
+         panther.down.pathway()$PATHWAY_TERM %>% table %>% sort() %>% as.data.frame %>% arrange(desc(Freq))
+     })
      
      
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
