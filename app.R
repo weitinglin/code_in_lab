@@ -156,6 +156,11 @@ ui <- tagList(
                                                      "P6+fibroblast < P6")
                                         ))
                ),
+            fluidRow(
+                column(5),
+                column(1, actionButton(inputId = "Gene.go",label = "Calculate!")),
+                column(2,helpText('調整完條件後，按Calculate鈕！'))
+            ),
             fluidRow(column(12)),
             fluidRow(
                 column(1),
@@ -280,13 +285,16 @@ server <- function(input, output){
 
 # Output$Gene.number ------------------------------------------------------  
     output$Gene.number <- renderDataTable({
-        DT::datatable(data.frame(Probe = probe.list(),
+    #use the action button
+       input$Gene.go
+    #use isolate to remove the depedency
+       isolate( DT::datatable(data.frame(Probe = probe.list(),
                    Symbol = gene.list(),
                    Adjusted.p = tmp()$adjusted.p),
                    options = list(
                        lengthMenu = list(c(3, 15, -1), c("3", "15", "All")),
                        pageLength = 15
-                   ))
+                   )))
        
     })
 # Output$Gene.select ------------------------------------------------------
