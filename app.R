@@ -1,6 +1,7 @@
 library(shiny)
 library(plotly)
 library(PANTHER.db)
+library(RColorBrewer)
 library(GO.db)
 source("/Users/Weitinglin/Documents/Repository/code_in_lab/00_microarry_function.R")
 load("/Users/Weitinglin/Documents/Repository/code_in_lab/total_ttest_result.Rdata")
@@ -8,6 +9,7 @@ load("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/data/intermediate/hgu
 load("/Users/Weitinglin/Documents/Repository/code_in_lab/total_probe_dataframe.Rdata")
 load("/Users/Weitinglin/Documents/Repository/code_in_lab/annotated_entrez_symbol.Rdata")
 load("/Users/Weitinglin/Documents/Repository/code_in_lab/hgu133plus2_annotation.RData")
+load("/Users/Weitinglin/Documents/Repository/code_in_lab/Exprs_data.RData")
 pthOrganisms(PANTHER.db) <- "HUMAN"
 
 
@@ -510,12 +512,40 @@ server <- function(input, output){
      
      output$Final.down.result <- renderDataTable({
          
-         left_join(annotated.entrez.symbol%>%select(-Symbol), hgu133plus2.probe.annotate[,c("Probe", "name", "description")]) %>% filter(Probe %in% intersect(down.CLF_CLS(), down.Sphere_CLS()))
+         left_join(annotated.entrez.symbol%>%select(-Symbol), hgu133plus2.probe.annotate[,c("Probe", "name", "description")]) %>%
+             filter(Probe %in% intersect(down.CLF_CLS(), down.Sphere_CLS()))
      })
      
      # Output$Final.3d ---------------------------------------------------------
+     exprssion <- log2(exprs(Exprs.data)+1) %>% as.data.frame()
+     exprssion$Probe <- rownames(exprssion)
+     scatter <- exprssion %>% mutate(CLF = (`CHW_CLF 13-6-1.CEL`+`CHW_CLF 13-6-2.CEL` + `CHW_CLF 13-6-3.CEL`)/3,
+                                CLS = (`CHW_CLS 1-2 p.6-1.CEL` + `CHW_CLS 1-2 p.6-2.CEL`+`CHW_CLS 1-2 p.6-3.CEL`)/3,
+                                Sphere = (`CHW_Sphere-1.CEL`+`CHW_Sphere-2.CEL`+ `CHW_Sphere-3.CEL`)/3) %>%
+                dplyr::select(Probe, CLF, CLS, Sphere)
+     scatter <- left_join(scatter, hgu133plus2.probe.annotate[,c("Probe", "name")])
+     usr.col <- brewer.pal(3, "Set1")
+     
+     scatter.data <- reactive({
+         scatter$tag[scatter$Probe %in% up.CLF_CLS()] <- "P6+fibroblast > P6.Up"
+         scatter$tag[scatter$Probe %in% up.Sphere_CLS()] <- "P6-Sphere > p6.Up"
+         scatter$tag[scatter$Probe %in% down.CLF_CLS()] <- "P6+fibroblast < P6.Down"
+         scatter$tag[scatter$Probe %in% down.Sphere_CLS()] <- "P6-Sphere < p6.Down"
+         scatter$tag[scatter$Probe %in% intersect(up.CLF_CLS(), up.Sphere_CLS())] <- "Intersection.Up"
+         scatter$tag[scatter$Probe %in% intersect(down.CLF_CLS(), down.Sphere_CLS())] <- "Intersection.Down"
+         scatter$tag[is.na(scatter$tag)] <- "not"
+         scatter
+     })
+     
      output$Final.3d <- renderPlotly({
-         plot_ly(mtcars, x = ~mpg, y = ~wt)
+         
+         
+         plot_ly(scatter.data(), x = ~CLF, y = ~CLS, z = ~Sphere,
+                 color = ~tag, colors = usr.col, text= ~paste('Symbol:',name,'<br>Probe:',Probe)) %>%
+             add_markers() %>%
+             layout(scene = list(xaxis = list(title = 'CLF'),
+                                 yaxis = list(title = 'CLS'),
+                                 zaxis = list(title = 'Sphere')))
          
      })
      
