@@ -190,8 +190,50 @@ ui <- tagList(
                )
             
             ),
+
+# Page:Fibroblast related ---------------------------------------------------
+
+
         tabPanel(title = "Fibroblast caused DE gene related to stemness",
-            fluidRow())
+                 fluidRow(
+                     column(1),
+                     column(3,selectInput(inputId = "Final.filter",
+                                          label = "Pre-filter before the t-test:",
+                                          choices = c("Nofilter" = "Nofilter","Filter by variance at 50%"="Filter"))),
+                     column(4,sliderInput(inputId = "Final.A.upper",
+                                          label = "Filter with expression level(A) post ttest: Lower than",
+                                          min = 1, max = 15, step = 0.5, value = 15)),
+                     column(4,sliderInput(inputId = "Final.A.lower",
+                                          label = "Filter with expression level(A) post ttest: Larger than",
+                                          min = 0, max = 15, step = 0.5, value = 0))
+                 ),
+                 fluidRow(
+                     column(1),
+                     column(3,selectInput(inputId = "Final.p",
+                                          label = "Filter with p value",
+                                          choices = c("0.001" = 0.001,
+                                                      "0.01"  = 0.01,
+                                                      "0.05"  = 0.05
+                                          ))),
+                     column(4,sliderInput(inputId = "Final.M.upper",
+                                          label = "Filter with fold change(M) post ttest: Larger than",
+                                          min = -10, max = 12, step = 0.5, value = 0)),
+                     column(4,sliderInput(inputId = "Final.M.lower",
+                                          label = "Filter with fold change(M) post ttest: Lower than",
+                                          min = -10, max = 12, step = 0.5, value = 0))
+                 ),
+                 fluidRow(
+                     column(5),
+                     column(1, actionButton(inputId = "Final.go",label = "Calculate!")),
+                     column(2,helpText('調整完條件後，按Calculate鈕！'))
+                 ),
+                fluidRow(
+                column(1),
+                column(5,plotOutput(outputId = "Final.venn.up")),
+                column(5,plotOutput(outputId = "Final.venn.down")),
+                column(1)
+                
+            ))
         ) 
     )
 
@@ -380,15 +422,70 @@ server <- function(input, output){
          panther.pathway()$PATHWAY_TERM %>% table %>% sort() %>% as.data.frame %>% arrange(desc(Freq))
      })
      
-    
+     # Reactive for Final data -----------------------------------------------------------
+     
+     
+     tmp.final <- reactive({
+         input$Final.go
+         isolate(total_ttest_result %>% mutate(A = 0.5*(estimate1 + estimate2),
+                                               M = estimate1 - estimate2) %>%  
+                     filter(Method == input$Final.filter) %>%
+                     filter(A < input$Final.A.upper) %>%
+                     filter(A > input$Final.A.lower) %>%
+                     filter(M > input$Final.M.upper | M < input$Final.M.lower) )
+     })
+     
+     final.gene.list <- reactive({
+         unname(getSYMBOL(tmp.Final()$gene,"hgu133plus2.db"))  
+     })
+     
+     final.probe.list <- reactive({
+         names(getSYMBOL(tmp.Final()$gene,"hgu133plus2.db"))
+     })
+  
+     up.CLF_CLS    <- reactive({
+         names(getSYMBOL((tmp.final() %>% filter(Case == "P6+fibroblast > P6"))$gene,"hgu133plus2.db"))
+     })
+         
+     up.Sphere_CLS <- reactive({
+         names(getSYMBOL((tmp.final() %>% filter(Case == "P6-Sphere > p6"))$gene,"hgu133plus2.db"))
+     }) 
+     
+     down.CLF_CLS    <- reactive({
+         names(getSYMBOL((tmp.final() %>% filter(Case == "P6+fibroblast < P6"))$gene,"hgu133plus2.db"))
+     })
+     
+     down.Sphere_CLS <- reactive({
+         names(getSYMBOL((tmp.final() %>% filter(Case == "P6-Sphere < p6"))$gene,"hgu133plus2.db"))
+     }) 
+     # Output$Final.venn.up ----------------------------------------------------
+       
+     output$Final.venn.up <- renderPlot({
+         area.1 <- length(up.CLF_CLS() )
+         area.2 <- length(up.Sphere_CLS())
+         area.12 <- length(intersect(up.CLF_CLS(), up.Sphere_CLS()))
+         area.list <- list(area.1, area.2, area.12)
+         draw.pairwise.venn(area1 = area.list[[1]], area2 = area.list[[2]], n12 = area.list[[3]], c("P6+fibroblast > P6", "P6-Sphere > p6"), lty = "blank")
+     })
+       
+         
+     # Output$Final.venn.down --------------------------------------------------
+     output$Final.venn.down <- renderPlot({
+         area.1 <- length(down.CLF_CLS() )
+         area.2 <- length(down.Sphere_CLS())
+         area.12 <- length(intersect(down.CLF_CLS(), down.Sphere_CLS()))
+         area.list <- list(area.1, area.2, area.12)
+         draw.pairwise.venn(area1 = area.list[[1]], area2 = area.list[[2]], n12 = area.list[[3]], c("P6+fibroblast < P6", "P6-Sphere < p6"), lty = "blank")
+     })
+     
+     
+     
      
      
      
      
      
     }
-
-
 
 
 
