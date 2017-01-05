@@ -94,10 +94,10 @@ ui <- tagList(
               column(1),
               column(5,sliderInput(inputId = "Result.M.upper",
                                    label = "Filter with fold change(M) post ttest: Larger than",
-                                   min = -10, max = 12, step = 0.5, value = 1)),
+                                   min = -10, max = 12, step = 0.5, value = 0)),
               column(5,sliderInput(inputId = "Result.M.lower",
                                    label = "Filter with fold change(M) post ttest: Lower than",
-                                   min = -10, max = 12, step = 0.5, value = -1))
+                                   min = -10, max = 12, step = 0.5, value = 0))
           ),
           fluidRow(
               column(1),
