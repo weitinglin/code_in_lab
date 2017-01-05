@@ -136,15 +136,16 @@ ui <- tagList(
                      column(1),
                      column(3,selectInput(inputId = "Gene.p",
                                           label = "Filter with p value",
-                                          choices = c("0.05"  = 0.05,
+                                          choices = c("0.001" = 0.001,
                                                       "0.01"  = 0.01,
-                                                      "0.001" = 0.001))),
+                                                      "0.05"  = 0.05
+                                                      ))),
                      column(4,sliderInput(inputId = "Gene.M.upper",
                                           label = "Filter with fold change(M) post ttest: Larger than",
-                                          min = -10, max = 12, step = 0.5, value = 1)),
+                                          min = -10, max = 12, step = 0.5, value = 0)),
                      column(4,sliderInput(inputId = "Gene.M.lower",
                                           label = "Filter with fold change(M) post ttest: Lower than",
-                                          min = -10, max = 12, step = 0.5, value = -1))
+                                          min = -10, max = 12, step = 0.5, value = 0))
                 ),
             fluidRow(
                 column(1),
