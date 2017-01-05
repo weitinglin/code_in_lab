@@ -496,7 +496,7 @@ server <- function(input, output){
      
      output$Final.up.result <- renderDataTable({
          
-         left_join(annotated.entrez.symbol, hgu133plus2.probe.annotate[,c("Probe", "name", "description")]) %>%
+         left_join(annotated.entrez.symbol%>%select(-Symbol), hgu133plus2.probe.annotate[,c("Probe", "name", "description")]) %>%
          filter(Probe %in% intersect(up.CLF_CLS(), up.Sphere_CLS()))
      })
      
@@ -506,7 +506,7 @@ server <- function(input, output){
      
      output$Final.down.result <- renderDataTable({
          
-         left_join(annotated.entrez.symbol, hgu133plus2.probe.annotate[,c("Probe", "name", "description")]) %>% filter(Probe %in% intersect(down.CLF_CLS(), down.Sphere_CLS()))
+         left_join(annotated.entrez.symbol%>%select(-Symbol), hgu133plus2.probe.annotate[,c("Probe", "name", "description")]) %>% filter(Probe %in% intersect(down.CLF_CLS(), down.Sphere_CLS()))
      })
      
      
