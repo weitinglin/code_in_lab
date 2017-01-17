@@ -636,26 +636,30 @@ server <- function(input, output){
      output$Final.up.panther <- renderDataTable({
          
          #panther.result() %>% filter(!is.na(CLASS_TERM)) %>% ggplot + geom_bar(aes(x = CLASS_TERM)) + coord_polar(theta = "x", direction=1)
-         panther.up.result()$CLASS_TERM %>% table %>% sort() %>% as.data.frame %>% arrange(desc(Freq))
+         #panther.up.result()$CLASS_TERM %>% table %>% sort() %>% as.data.frame %>% arrange(desc(Freq))
+         left_join(panther.up.result()%>%rename(EntrezID=ENTREZ),annotated.entrez.symbol,by = "EntrezID")
      })
      # Output$Final.down.panther -----------------------------------------------
      output$Final.down.panther <- renderDataTable({
          
          #panther.result() %>% filter(!is.na(CLASS_TERM)) %>% ggplot + geom_bar(aes(x = CLASS_TERM)) + coord_polar(theta = "x", direction=1)
-         panther.down.result()$CLASS_TERM %>% table %>% sort() %>% as.data.frame %>% arrange(desc(Freq))
+         #panther.down.result()$CLASS_TERM %>% table %>% sort() %>% as.data.frame %>% arrange(desc(Freq))
+         left_join(panther.down.result()%>%rename(EntrezID=ENTREZ),annotated.entrez.symbol,by = "EntrezID")
      })
      # Output$Final.up.pathway -------------------------------------------------
      
      output$Final.up.pathway <- renderDataTable({
          
          #panther.result() %>% filter(!is.na(CLASS_TERM)) %>% ggplot + geom_bar(aes(x = CLASS_TERM)) + coord_polar(theta = "x", direction=1)
-         panther.up.pathway()$PATHWAY_TERM %>% table %>% sort() %>% as.data.frame %>% arrange(desc(Freq))
+         #panther.up.pathway()$PATHWAY_TERM %>% table %>% sort() %>% as.data.frame %>% arrange(desc(Freq))
+         left_join(panther.up.pathway()%>%rename(EntrezID=ENTREZ),annotated.entrez.symbol,by = "EntrezID")
      })
      # Output$Final.down.pathway -----------------------------------------------
      output$Final.down.pathway <- renderDataTable({
          
          #panther.result() %>% filter(!is.na(CLASS_TERM)) %>% ggplot + geom_bar(aes(x = CLASS_TERM)) + coord_polar(theta = "x", direction=1)
-         panther.down.pathway()$PATHWAY_TERM %>% table %>% sort() %>% as.data.frame %>% arrange(desc(Freq))
+         #panther.down.pathway()$PATHWAY_TERM %>% table %>% sort() %>% as.data.frame %>% arrange(desc(Freq))
+         left_join(panther.down.pathway()%>%rename(EntrezID=ENTREZ),annotated.entrez.symbol,by = "EntrezID")
      })
      
      

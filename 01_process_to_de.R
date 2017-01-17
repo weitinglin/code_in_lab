@@ -282,6 +282,7 @@ target.probe <- probererlateTF %>% filter(Probe %in% target.list)
 ecelfile.set <- exprs ( Exprs.data )
 
 
+
 # do the quantile normalization 
 a <- ecelfile.set
 asort <- apply(a,2,sort)
@@ -670,6 +671,31 @@ lapply(chdir_analysis_example$chdirprops[[1]],head)
 # and the estimated number of significant genes can be recovered with
 chdir_analysis_example$chdirprops$number_sig_genes
 
+
+# EX08 MAS5, QN, LOG2, ANNOVA ---------------------------------------------
+ecelfile.set <- exprs ( Exprs.data )
+
+#QN + log2
+
+norm <- quantile_normalization(ecelfile.set = ecelfile.set, method="median")
+
+#annova
+annova_test <- function(norm){
+registerDoParallel(cores=4)
+ex.design <- factor(c(rep("CLF",3), rep("CLS",3), rep("Sphere",3)))
+probe.name <- rownames(norm)
+
+test.annova.result  <- foreach(i = 1:nrow(norm)) %dopar% {
+    aov(norm[i,] ~ ex.design) 
+}
+
+test.tukey.result  <- foreach(i = 1:nrow(norm)) %dopar% {
+    TukeyHSD(test.annova.result[[i]]) %>% tidy %>% filter(comparison != "Sphere-CLF") %>% mutate(annova.p.value=(test.annova.result[[i]] %>% tidy() %>% select(p.value))[[1]][1], probe = probe.name[i])
+}
+
+test.tukey.result <- invoke(rbind, map(test.tukey.result,data.frame)) %>% select(-term)
+return(test.tukey.result)
+}
 
 # Appendix: Annotation  -------------------------------------------------------------
 # the library dependence

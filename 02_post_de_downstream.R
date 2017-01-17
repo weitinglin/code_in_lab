@@ -1141,10 +1141,10 @@ sum(is.na(subset$symbol))
 subset$symbol[!is.na(subset$symbol)] %>% unique%>% cat
 system("say finished")
 
-# 
 
 
-# Filter ------------------------------------------------------------------
+
+# Filter
 gprofilterfilter.greater.CLF_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestWITHfilter10_3hierchyfilter /gprofiler_results_filter_upregulation_CLF_CLS.txt", delim = "\t")
 gprofilterfilter.greater.Sphere_CLF <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestWITHfilter10_3hierchyfilter /gprofiler_results_filter_upregulation_Sphere_CLF.txt", delim = "\t")
 gprofilterfilter.greater.Sphere_CLS <- read_delim("/Users/Weitinglin/Documents/R_scripts/Lab/gprofiler/ttestWITHfilter10_3hierchyfilter /gprofiler_results_filter_003_greater_Sphere_CLS.txt", delim = "\t")
@@ -1294,6 +1294,9 @@ library(VennDiagram)
 draw.pairwise.venn(area1 = area.list[[1]], area2 = area.list[[2]], n12 = area.list[[3]], c("CLF_CLS", "Sphere_CLS"), lty = "blank")
 
 
-# Shiny -------------------------------------------------------------------
+# SOM -------------------------------------------------------------------
+
+# Clustering & Heatmap ----------------------------------------------------
+
 
 
