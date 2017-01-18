@@ -681,7 +681,7 @@ norm <- quantile_normalization(ecelfile.set = ecelfile.set, method="median")
 
 #annova
 annova_test <- function(norm){
-registerDoParallel(cores=4)
+registerDoParallel(cores=16)
 ex.design <- factor(c(rep("CLF",3), rep("CLS",3), rep("Sphere",3)))
 
 probe.name <- rownames(norm)
@@ -711,21 +711,57 @@ probe.name <- rownames(norm)
 
 test.annova.result <- list()
 test.tukey.result  <- list()
-
+Sys.time()
+# Step 1
 for (i in 1:length(norm)){
-    test.annova.result[[1]] <- aov(norm[i,] ~ ex.design)
+    test.annova.result[[i]] <- aov(norm[i,] ~ ex.design)
 }
-
+Sys.time()
+save(test.annova.result, file="test_annova_result.Rdata")
+# Step 2
 for ( i in 1:length(norm)){
-    test.tukey.result[[i]] <- TukeyHSD(test.annova.result[[i]]) %>%
-                                                           tidy %>%
-                                                           filter(comparison != "Sphere-CLF") %>%
-                                                           mutate(annova.p.value=(test.annova.result[[i]] %>%
-                                                           tidy() %>%
-                                                           select(p.value))[[1]][1], probe = probe.name[i])
+    test.tukey.result[[i]] <- TukeyHSD(test.annova.result[[i]])
+    mem_used()
+    print(i)
 }
 
-test.tukey.final.result <- invoke(rbind, map(test.tukey.result,data.frame)) %>% select(-term)
+Sys.time()
+# Step 3
+test.tukey.result  <- foreach(i = 1:nrow(norm)) %dopar% {
+  TukeyHSD(test.annova.result[[i]]) 
+}
+save(test.tukey.result, file="test_tukey_result.Rdata")
+Sys.time()
+
+# Step 4
+test.tukey.result.dataframe  <- foreach(i = 1:nrow(norm)) %dopar% {
+  test.tukey.result[[1]]  %>% with(ex.design) %>% tidy()
+}
+
+# Step 5
+test.tukey.result.p.value  <- foreach(i = 1:nrow(norm)) %dopar% {
+  test.annova.result[[i]] %>% tidy %>% slice_(1) %>% with(p.value)
+}
+rm(test.annova.result)
+test.tukey.result.p.value <- unlist(test.tukey.result.p.value)
+
+# Step 6 
+test.tukey.result.dataframe.mutate  <- foreach(i = 1:nrow(norm)) %dopar% {
+  test.tukey.result.dataframe[[i]]%>% mutate(annova.p.value = test.tukey.result.p.value[[i]],
+                                             probe = probe.name[[i]]) %>% rename(case=`.rownames`)
+}
+
+# Step 7
+test.tukey.final.result <- invoke(rbind, map(test.tukey.result.dataframe.mutate,data.frame)) 
+Sys.time()
+
+# Step 8 annotate
+test.tukey.final.result <- test.tukey.final.result %>% rename(Probe=probe)
+test.tukey.final.result <- left_join(test.tukey.final.result, annotated.entrez.symbol, by="Probe")
+
+
+
+
 
 
 # Appendix: Annotation  -------------------------------------------------------------
