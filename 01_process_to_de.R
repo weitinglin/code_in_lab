@@ -683,6 +683,7 @@ norm <- quantile_normalization(ecelfile.set = ecelfile.set, method="median")
 annova_test <- function(norm){
 registerDoParallel(cores=4)
 ex.design <- factor(c(rep("CLF",3), rep("CLS",3), rep("Sphere",3)))
+
 probe.name <- rownames(norm)
 
 test.annova.result  <- foreach(i = 1:nrow(norm)) %dopar% {
@@ -690,12 +691,42 @@ test.annova.result  <- foreach(i = 1:nrow(norm)) %dopar% {
 }
 
 test.tukey.result  <- foreach(i = 1:nrow(norm)) %dopar% {
-    TukeyHSD(test.annova.result[[i]]) %>% tidy %>% filter(comparison != "Sphere-CLF") %>% mutate(annova.p.value=(test.annova.result[[i]] %>% tidy() %>% select(p.value))[[1]][1], probe = probe.name[i])
+    TukeyHSD(test.annova.result[[i]]) %>%
+        tidy %>%
+        filter(comparison != "Sphere-CLF") %>%
+        mutate(annova.p.value=(test.annova.result[[i]] %>%
+                                   tidy() %>%
+                                   select(p.value))[[1]][1], probe = probe.name[i])
 }
 
 test.tukey.result <- invoke(rbind, map(test.tukey.result,data.frame)) %>% select(-term)
 return(test.tukey.result)
 }
+
+annova.tukey.result <- annova_test(norm)
+
+# not use the doparrell
+ex.design <- factor(c(rep("CLF",3), rep("CLS",3), rep("Sphere",3)))
+probe.name <- rownames(norm)
+
+test.annova.result <- list()
+test.tukey.result  <- list()
+
+for (i in 1:length(norm)){
+    test.annova.result[[1]] <- aov(norm[i,] ~ ex.design)
+}
+
+for ( i in 1:length(norm)){
+    test.tukey.result[[i]] <- TukeyHSD(test.annova.result[[i]]) %>%
+                                                           tidy %>%
+                                                           filter(comparison != "Sphere-CLF") %>%
+                                                           mutate(annova.p.value=(test.annova.result[[i]] %>%
+                                                           tidy() %>%
+                                                           select(p.value))[[1]][1], probe = probe.name[i])
+}
+
+test.tukey.final.result <- invoke(rbind, map(test.tukey.result,data.frame)) %>% select(-term)
+
 
 # Appendix: Annotation  -------------------------------------------------------------
 # the library dependence
