@@ -735,7 +735,7 @@ Sys.time()
 
 # Step 4
 test.tukey.result.dataframe  <- foreach(i = 1:nrow(norm)) %dopar% {
-  test.tukey.result[[1]]  %>% with(ex.design) %>% tidy()
+  test.tukey.result[[i]]  %>% with(ex.design) %>% tidy()
 }
 
 # Step 5

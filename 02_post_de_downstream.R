@@ -984,7 +984,7 @@ area.12 <- length(intersect(down.CLF_CLS, down.Sphere_CLS))
 area.list <- list(area.1, area.2, area.12)
 
 
-#  QN, Log2, with filter 50% upregulation and downregulation ---------------
+#  *************************************************------
 
 
 
@@ -1294,9 +1294,67 @@ library(VennDiagram)
 draw.pairwise.venn(area1 = area.list[[1]], area2 = area.list[[2]], n12 = area.list[[3]], c("CLF_CLS", "Sphere_CLS"), lty = "blank")
 
 
+# QN, Log2, Annova, Tukey -------------------------------------------------
+
+aov.Sphere_CLS <- test.tukey.final.result %>% filter(case ==  "Sphere-CLS")
+aov.CLS_CLF    <- test.tukey.final.result %>% filter(case ==   "CLS-CLF")
+
+# filter with annova p value < 0.05
+aov.p.Sphere_CLS  <- aov.CLS_CLF %>% filter(annova.p.value < 0.05)
+aov.p.CLS_CLF     <- aov.CLS_CLF %>% filter(annova.p.value < 0.05)
+
+# adjusted the p.value with the BH
+
+test.tukey.final.result %>% filter(case != "Sphere-CLF") %>%
+                            group_by(case) %>%
+                            mutate(BH.p.adj=p.adjust(p.adj, method="BH")) %>%
+                            summarise(n_0.05=sum(p.adj < 0.05),
+                                      n_0.01=sum(p.adj < 0.01),
+                                      n_0.001=sum(p.adj < 0.001),
+                                      N_0.05=sum(BH.p.adj < 0.05),
+                                      N_0.01=sum(BH.p.adj < 0.01),
+                                      N_0.0001=sum(BH.p.adj < 0.0001))
+
+#分出up,down的case
+# Up-regulation(只得是CLF相對於CLS,或是Sphere相對CLS)
+tukey.aov.adjust.method <- "BH"
+up.tukey.aov.CLF_CLS        <- test.tukey.final.result %>%
+                                filter(case == "CLS-CLF", diff < 0) %>% 
+                                mutate(BH.p.adj=p.adjust(p.adj, method=tukey.aov.adjust.method))
+up.tukey.aov.CLF_CLS %>% summarise(n_005=sum(BH.p.adj < 0.05), n_001=sum(BH.p.adj < 0.01), n_0001=sum(BH.p.adj < 0.001), n_00001=sum(BH.p.adj < 0.0001))                          
+  
+up.tukey.aov.Sphere_CLS     <- test.tukey.final.result %>%
+                                filter(case == "Sphere-CLS", diff > 0) %>% 
+                                mutate(BH.p.adj=p.adjust(p.adj, method=tukey.aov.adjust.method))
+up.tukey.aov.Sphere_CLS  %>% summarise(n_005=sum(BH.p.adj < 0.05), n_001=sum(BH.p.adj < 0.01), n_0001=sum(BH.p.adj < 0.001), n_00001=sum(BH.p.adj < 0.0001))
+
+
+
+
+# Down-regulation
+down.tukey.aov.CLF_CLS      <- test.tukey.final.result %>%
+                                filter(case == "CLS-CLF", diff > 0) %>% 
+                                mutate(BH.p.adj=p.adjust(p.adj, method=tukey.aov.adjust.method))
+donw.tukey.aov.CLF_CLS %>% summarise(n_005=sum(BH.p.adj < 0.05), n_001=sum(BH.p.adj < 0.01), n_0001=sum(BH.p.adj < 0.001), n_00001=sum(BH.p.adj < 0.0001))
+
+down.tukey.aov.Sphere_CLS   <- test.tukey.final.result %>%
+                                filter(case == "Sphere-CLS", diff < 0) %>% 
+                                mutate(BH.p.adj=p.adjust(p.adj, method=tukey.aov.adjust.method))
+up.tukey.aov.Sphere_CLS %>% summarise(n_005=sum(BH.p.adj < 0.05), n_001=sum(BH.p.adj < 0.01), n_0001=sum(BH.p.adj < 0.001), n_00001=sum(BH.p.adj < 0.0001))
+
+
+save(up.tukey.aov.CLF_CLS,up.tukey.aov.Sphere_CLS,down.tukey.aov.CLF_CLS,down.tukey.aov.Sphere_CLS,file = "updown_tukey_aov_result.Rdata")
+#比較兩者交集的
+#畫交集圖
+
+# ***************************************** -------------------------------
+
+
+
 # SOM -------------------------------------------------------------------
 
 # Clustering & Heatmap ----------------------------------------------------
+
 
 
 
