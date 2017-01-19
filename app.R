@@ -184,7 +184,7 @@ ui <- tagList(
             fluidRow(
                 column(1),
                 column(5, plotOutput(outputId = "Gene.MAplot")),
-                column(4, dataTableOutput('Gene.number')),
+                column(4, dataTableOutput(outputId = 'Gene.number')),
                 column(2)
                ),
             fluidRow(
