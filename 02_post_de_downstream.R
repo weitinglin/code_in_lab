@@ -1308,12 +1308,12 @@ aov.p.CLS_CLF     <- aov.CLS_CLF %>% filter(annova.p.value < 0.05)
 test.tukey.final.result %>% filter(case != "Sphere-CLF") %>%
                             group_by(case) %>%
                             mutate(BH.p.adj=p.adjust(p.adj, method="BH")) %>%
-                            summarise(n_0.05=sum(p.adj < 0.05),
-                                      n_0.01=sum(p.adj < 0.01),
-                                      n_0.001=sum(p.adj < 0.001),
+                            summarise(
                                       N_0.05=sum(BH.p.adj < 0.05),
                                       N_0.01=sum(BH.p.adj < 0.01),
-                                      N_0.0001=sum(BH.p.adj < 0.0001))
+                                      N_0.001=sum(BH.p.adj < 0.001),
+                                      N_0.0001=sum(BH.p.adj < 0.0001),
+                                      N_0.00001=sum(BH.p.adj < 0.00001))
 
 #分出up,down的case
 # Up-regulation(只得是CLF相對於CLS,或是Sphere相對CLS)
@@ -1335,7 +1335,7 @@ up.tukey.aov.Sphere_CLS  %>% summarise(n_005=sum(BH.p.adj < 0.05), n_001=sum(BH.
 down.tukey.aov.CLF_CLS      <- test.tukey.final.result %>%
                                 filter(case == "CLS-CLF", diff > 0) %>% 
                                 mutate(BH.p.adj=p.adjust(p.adj, method=tukey.aov.adjust.method))
-donw.tukey.aov.CLF_CLS %>% summarise(n_005=sum(BH.p.adj < 0.05), n_001=sum(BH.p.adj < 0.01), n_0001=sum(BH.p.adj < 0.001), n_00001=sum(BH.p.adj < 0.0001))
+down.tukey.aov.CLF_CLS %>% summarise(n_005=sum(BH.p.adj < 0.05), n_001=sum(BH.p.adj < 0.01), n_0001=sum(BH.p.adj < 0.001), n_00001=sum(BH.p.adj < 0.0001))
 
 down.tukey.aov.Sphere_CLS   <- test.tukey.final.result %>%
                                 filter(case == "Sphere-CLS", diff < 0) %>% 
@@ -1350,6 +1350,15 @@ tmp.up   <- bind_rows(up.tukey.aov.CLF_CLS, up.tukey.aov.Sphere_CLS) %>% mutate(
 tmp.down <- bind_rows(down.tukey.aov.CLF_CLS, down.tukey.aov.Sphere_CLS) %>% mutate(type = "down")
 
 total.aov.tukey <- bind_rows(tmp.up, tmp.down) 
+
+
+total.aov.tukey %>%
+    group_by(case, type) %>%
+    summarise(N_0.05=sum(BH.p.adj < 0.05),
+              N_0.01=sum(BH.p.adj < 0.01),
+              N_0.001=sum(BH.p.adj < 0.001),
+              N_0.0001=sum(BH.p.adj < 0.0001),
+              N_0.00001=sum(BH.p.adj < 0.00001))
 
 
 
@@ -1378,12 +1387,353 @@ MA.plot.Sphere_CLS <- MA.plot.Sphere_CLS %>% mutate(M = Sphere-CLS, A=0.5*(Spher
                                                     P = cut(BH.p.adj, c(0,0.0001,0.001,0.01,0.05,1),
                                                       c("p<0.0001","p<0.001","p<0.01","p<0.05","p>0.05")))
 
+# Upregulation
+cutoff.p <- 0.00001
+up.CLF_CLS    <- up.tukey.aov.CLF_CLS %>% filter(BH.p.adj < cutoff.p)
+up.Sphere_CLS <- up.tukey.aov.Sphere_CLS %>% filter(BH.p.adj < cutoff.p)
 
-ggplot(data=MA.plot.CLS_CLF[,c('A','M')]) + geom_point(aes(x = A, y = M, alpha=0.5))
+area.1 <- length(up.CLF_CLS$Probe )
+area.2 <- length(up.Sphere_CLS$Probe)
+area.12 <- length(intersect(up.CLF_CLS$Probe, up.Sphere_CLS$Probe))
+area.list <- list(area.1, area.2, area.12)
+draw.pairwise.venn(area1 = area.list[[1]], area2 = area.list[[2]], cross.area = area.list[[3]],
+                   category = c("P6+fibroblast > P6", "P6-Sphere > p6"),
+                   fill = c("Blue","Red"))
+# Downregulation
+cutoff.p <- 0.00001
+down.CLF_CLS    <- down.tukey.aov.CLF_CLS  %>% filter(BH.p.adj < cutoff.p)
+down.Sphere_CLS <- down.tukey.aov.Sphere_CLS %>% filter(BH.p.adj < cutoff.p)
+# The DE gene related to the 
+area.1 <- length(down.CLF_CLS$Probe )
+area.2 <- length(down.Sphere_CLS$Probe )
+area.12 <- length(intersect(down.CLF_CLS$Probe, down.Sphere_CLS$Probe ))
+area.list <- list(area.1, area.2, area.12)
+draw.pairwise.venn(area1 = area.list[[1]], area2 = area.list[[2]], cross.area = area.list[[3]],
+                   category = c("P6+fibroblast < P6", "P6-Sphere < p6"),
+                   fill = c("Blue", "Red"))
+
+
+
+
+
+# _down.stream analysis ---------------------------------------------------
+# Hierachial cluster use heatmaply
+union.up       <- union(up.CLF_CLS$Probe, up.Sphere_CLS$Probe)
+intersect.up   <- intersect(up.CLF_CLS$Probe, up.Sphere_CLS$Probe)
+
+union.down     <- union(down.CLF_CLS$Probe, down.Sphere_CLS$Probe)
+intersect.down <- intersect(down.CLF_CLS$Probe, down.Sphere_CLS$Probe)
+
+subset.norm <- norm[rownames(norm) %in% c(union.up),]
+subset.norm <- norm[rownames(norm) %in% c(intersect.up),]
+subset.norm <- norm[rownames(norm) %in% c(intersect.down),]
+subset.norm <- norm[rownames(norm) %in% c(intersect.up, intersect.down),]
+subset.norm <- norm[rownames(norm) %in% c(union.down),]
+subset.norm <- norm[rownames(norm) %in% c(union.up,union.down),]
+subset.norm <- t(scale(t(subset.norm)))
+colnames(subset.norm) <- c("P6+Fib-1","P6+Fib-2","P6+Fib-3","P6-1","P6-2","P6-3","Sphere_p6-1","Sphere_p6-2","Sphere_p6-3")
+RdYlGn <- colorRampPalette(brewer.pal(11, "RdYlGn"))
+heatmaply(subset.norm, k_col = 2, k_row = 4,
+          xaxis_font_size = "10pt", yaxis_font_size = "10pt",
+          row_text_angle = -40, column_text_angle =  90,
+          scale_fill_gradient_fun = ggplot2::scale_fill_gradient2(low = "green", high = "red", midpoint = 0) ) %>%
+          layout(margin = list(l = 180, b = 100))
+
+heatmaply(subset.norm, k_col = 2, k_row = 4,
+          xaxis_font_size = "10pt", yaxis_font_size = "10pt",
+          labRow = rep("",nrow(subset.norm)), column_text_angle =  90,
+          scale_fill_gradient_fun = ggplot2::scale_fill_gradient2(low = "green", high = "red", midpoint = 0) ) %>%
+    layout(margin = list(l = 180, b = 100))
+library(heatmaply)
+heatmaply(subset.norm, k_col = 2, k_row = 4,
+          xaxis_font_size = "10pt", yaxis_font_size = "10pt",
+          row_text_angle = -40, column_text_angle =  90,
+          colors = rev(RdYlGn(256)),
+          seriate = "GW" ) %>%
+    layout(margin = list(l = 180, b = 100))
+
+
+library(gplots)
+heatmap.2(subset.norm, srtCol=30,labRow = FALSE, keysize = 1, offsetCol = 0, col=rev(RdYlGn(256)),
+          trace = "none")
+
+
+
+
+# scatter plot ------------------------------------------------------------
+library(RColorBrewer)
+usr.col <- brewer.pal(3, "Set1")
+
+scatter.norm <- norm %>% as.data.frame %>% mutate(CLF = (`CHW_CLF 13-6-1.CEL`+`CHW_CLF 13-6-2.CEL` + `CHW_CLF 13-6-3.CEL`)/3,
+                                              CLS = (`CHW_CLS 1-2 p.6-1.CEL` + `CHW_CLS 1-2 p.6-2.CEL`+`CHW_CLS 1-2 p.6-3.CEL`)/3,
+                                              Sphere = (`CHW_Sphere-1.CEL`+`CHW_Sphere-2.CEL`+ `CHW_Sphere-3.CEL`)/3) %>% dplyr::select(CLS, Sphere, CLF)
+scatter.norm <- scatter.norm %>% mutate(Probe = probe.name)
+scatter.norm <- scatter.norm %>% dplyr::select(Probe,CLF,CLS,Sphere)
+scatter.norm <- left_join(scatter.norm, (annotation.probe.dataframe %>% dplyr::select(Probe,name,CSmarker,CSrelated,Total)), by ="Probe")
+
+scatter.norm$tag[scatter.norm$Probe %in% union.up] <- "total upregulation"
+scatter.norm$tag[scatter.norm$Probe %in% union.down] <- "total downregulation"
+scatter.norm$tag[scatter.norm$Probe %in% intersect.up] <- "intersect of upregulation"
+scatter.norm$tag[scatter.norm$Probe %in% intersect.down] <- "intersect of downregulation"
+scatter.norm$tag[is.na(scatter.norm$tag)] <- "not differential expression"
+
+
+plot_ly(scatter.norm, x = ~CLF, y = ~CLS, z = ~Sphere,
+        color = ~tag, colors = usr.col, text= ~paste('Symbol:',name,'<br>Probe:',Probe)) %>%
+    add_markers() %>%
+    layout(scene = list(xaxis = list(title = 'CLF'),
+                        yaxis = list(title = 'CLS'),
+                        zaxis = list(title = 'Sphere')))
+
+
+
+
+
+#use the package seriation to reordering the cluster
+#OLO GW mean non
+library(AnnotationHub)
+ah <- AnnotationHub()
+human <- ah[ah$species == "Homo sapiens"]
+human.orgs <- subset(human, human$rdataclass == "OrgDb")
+data.human.orgs <- human.orgs[["AH49582"]]
+genesym <- total.probe.data.frame$name[!is.na(total.probe.data.frame$name)]
+geneid <- select(data.human.orgs, keys=genesym, keytype="SYMBOL",
+                 columns="ENTREZID")
+geneid <- geneid %>% dplyr::rename(name=SYMBOL)
+
+
+# Use panther for further exploration 
+geneid <- unique(geneid)
+geneid.deduplicate <- geneid[!duplicated(geneid$name),]
+annotation.probe.dataframe <- left_join(total.probe.data.frame, geneid.deduplicate, by="name")
+
+
+# up intersect
+up.annotation.tukey <- annotation.probe.dataframe %>% filter(Probe %in% intersect.up)
+library(PANTHER.db)
+pthOrganisms(PANTHER.db) <- "HUMAN"
+key     <- up.annotation.tukey$ENTREZID
+choices <- c("CLASS_TERM")
+#protein function
+up.result.protein.function <- PANTHER.db::select(PANTHER.db,
+                             keys = key,
+                             columns = choices,
+                             keytype = "ENTREZ")
+up.result.protein.function <- up.result.protein.function %>% filter(!is.na(CLASS_TERM))
+#pathway
+choices <- c("PATHWAY_TERM")
+up.result.protein.pathway <- PANTHER.db::select(PANTHER.db,
+                                              keys = key,
+                                              columns = choices,
+                                              keytype = "ENTREZ")
+up.result.protein.pathway <- up.result.protein.pathway %>% filter(!is.na(PATHWAY_TERM))
+
+
+# down intersect
+down.annotation.tukey <- annotation.probe.dataframe %>% filter(Probe %in% intersect.down)
+
+
+
+
+key     <- down.annotation.tukey$ENTREZID
+choices <- c("CLASS_TERM")
+#protein function
+down.result.protein.function <- PANTHER.db::select(PANTHER.db,
+                                              keys = key,
+                                              columns = choices,
+                                              keytype = "ENTREZ")
+down.result.protein.function <- down.result.protein.function %>% filter(!is.na(CLASS_TERM))
+#pathway
+choices <- c("PATHWAY_TERM")
+down.result.protein.pathway <- PANTHER.db::select(PANTHER.db,
+                                             keys = key,
+                                             columns = choices,
+                                             keytype = "ENTREZ")
+down.result.protein.pathway <- down.result.protein.pathway %>% filter(!is.na(PATHWAY_TERM))
+
+save(up.result.protein.function, up.result.protein.pathway, down.result.protein.function, down.result.protein.pathway, file = "tukey_result_panther.Rdata")
+
+
+
+
+#final annotation big table
+up.annotation.tukey <- up.annotation.tukey %>% rename(ENTREZ = ENTREZID)
+up.result.protein.function 
+up.result.protein.pathway
+
+up.result.aggregate.protein.function <- aggregate(CLASS_TERM ~ ENTREZ,data=up.result.protein.function,toString) 
+up.result.aggregate.protein.pathway <- aggregate(PATHWAY_TERM ~ ENTREZ,data=up.result.protein.pathway,toString) 
+
+up.total.annotation.tukey <- left_join(up.annotation.tukey,up.result.aggregate.protein.function, by="ENTREZ")
+up.total.annotation.tukey <- left_join(up.total.annotation.tukey, up.result.aggregate.protein.pathway, by ="ENTREZ")
+
+
+down.annotation.tukey <- down.annotation.tukey %>% rename(ENTREZ = ENTREZID)
+down.result.aggregate.protein.function <- aggregate(CLASS_TERM ~ ENTREZ, data=down.result.protein.function,toString) 
+down.result.aggregate.protein.pathway  <- aggregate(PATHWAY_TERM ~ ENTREZ, data=down.result.protein.pathway,toString) 
+
+down.total.annotation.tukey <- left_join(down.annotation.tukey,down.result.aggregate.protein.function, by="ENTREZ")
+down.total.annotation.tukey <- left_join(down.total.annotation.tukey, down.result.aggregate.protein.pathway, by ="ENTREZ")
+
+
+up.p.value.CLF_CLS <- up.CLF_CLS %>% filter(Probe %in% intersect.up) %>%
+    mutate(CLF_CLS.BH.p.adj=BH.p.adj) %>%
+    dplyr::select(Probe,CLF_CLS.BH.p.adj)
+up.p.value.Sphere_CLS <- up.Sphere_CLS %>% filter(Probe %in% intersect.up) %>%
+    mutate(Sphere_CLS.BH.p.adj=BH.p.adj) %>%
+    dplyr::select(Probe,Sphere_CLS.BH.p.adj)
+up.total.annotation.tukey <- left_join(up.total.annotation.tukey, up.p.value.CLF_CLS, by="Probe")
+up.total.annotation.tukey <- left_join(up.total.annotation.tukey, up.p.value.Sphere_CLS, by="Probe")
+up.total.annotation.tukey <- up.total.annotation.tukey %>% dplyr::select(-c(BP,CC,GO))
+
+
+down.p.value.CLF_CLS <- down.CLF_CLS %>% filter(Probe %in% intersect.down) %>%
+    mutate(CLF_CLS.BH.p.adj=BH.p.adj) %>%
+    dplyr::select(Probe,CLF_CLS.BH.p.adj)
+down.p.value.Sphere_CLS <- down.Sphere_CLS %>% filter(Probe %in% intersect.down) %>%
+    mutate(Sphere_CLS.BH.p.adj=BH.p.adj) %>%
+    dplyr::select(Probe,Sphere_CLS.BH.p.adj)
+down.total.annotation.tukey <- left_join(down.total.annotation.tukey, down.p.value.CLF_CLS, by="Probe")
+down.total.annotation.tukey <- left_join(down.total.annotation.tukey, down.p.value.Sphere_CLS, by="Probe")
+down.total.annotation.tukey <- down.total.annotation.tukey %>% dplyr::select(-c(BP,CC,GO))
+
+write_csv(up.total.annotation.tukey, path = "upregulation_annotation_tukey_final.csv", col_names = T)
+write_csv(down.total.annotation.tukey, path = "downregulation_annotation_tukey_final.csv", col_names = T)
+
+write_csv(up.total.annotation.tukey %>% filter(Probe %in% intersect.up), path = "upregulation_00001_annotation_tukey_final.csv", col_names = T)
+write_csv(down.total.annotation.tukey %>% filter(Probe %in% intersect.down), path = "downregulation_00001_annotation_tukey_final.csv", col_names = T)
+
+up.total.annotation.tukey %>% filter(Probe %in% intersect.up)
+down.total.annotation.tukey %>% filter(Probe %in% intersect.down)
+
+#merge with the origin p.value
+
+
+up.total.annotation.tukey %>% head
+
+
+
+
+
+
+#experiment
+a <- data.frame(x1=c("1293","2341","2345"),x2=c("A","B","C"))
+b <- data.frame(x1=c("1293", "1293", "1293"),x3=c("function1","function2","function3"))
+
+
+
 
 # ***************************************** -------------------------------
+#find the direction
+aov.norm <- norm %>% as.data.frame %>% mutate(CLF = (`CHW_CLF 13-6-1.CEL`+`CHW_CLF 13-6-2.CEL` + `CHW_CLF 13-6-3.CEL`)/3,
+                                  CLS = (`CHW_CLS 1-2 p.6-1.CEL` + `CHW_CLS 1-2 p.6-2.CEL`+`CHW_CLS 1-2 p.6-3.CEL`)/3,
+                                  Sphere = (`CHW_Sphere-1.CEL`+`CHW_Sphere-2.CEL`+ `CHW_Sphere-3.CEL`)/3) %>% dplyr::select(CLS, Sphere, CLF)
+aov.norm <- aov.norm %>% mutate(Probe = probe.name)
+aov.norm <- aov.norm %>% mutate(CLF_CLS = CLF - CLS, Sphere_CLS = Sphere - CLS)
+aov.norm <- aov.norm %>% dplyr::select(-c(CLF,CLS,Sphere))
+# QN, Log2, Annova, BF ----------------------------------------------------
+
+aov.bf.final <- left_join(aov.bonferroni.final, aov.norm, by = "Probe")
 
 
+up.aov.bf.CLF_CLS       <- aov.bf.final %>% filter(case == 'CLS-CLF', CLF_CLS > 0) %>% mutate(BH.mul.adj.p = p.adjust(p.value, method ="BH"), type = "up") %>% dplyr::select(-c(group1,group2))
+down.aov.bf.CLF_CLS     <- aov.bf.final %>% filter(case == 'CLS-CLF', CLF_CLS < 0) %>% mutate(BH.mul.adj.p = p.adjust(p.value, method ="BH"), type = "down") %>% dplyr::select(-c(group1,group2))
+
+
+up.aov.bf.Sphere_CLS    <- aov.bf.final %>% filter(case == 'Sphere-CLS', Sphere_CLS > 0) %>% mutate(BH.mul.adj.p = p.adjust(p.value, method ="BH"), type = "up") %>% dplyr::select(-c(group1,group2))
+down.aov.bf.Sphere_CLS  <- aov.bf.final %>% filter(case == 'Sphere-CLS', Sphere_CLS < 0) %>% mutate(BH.mul.adj.p = p.adjust(p.value, method ="BH"), type = "down") %>% dplyr::select(-c(group1,group2))
+
+
+
+total.aov.bf.final <- bind_rows(up.aov.bf.CLF_CLS, down.aov.bf.CLF_CLS, up.aov.bf.Sphere_CLS, down.aov.bf.Sphere_CLS)
+
+total.aov.bf.final %>% group_by(case, type) %>% summarise(n_0.05 = sum(BH.mul.adj.p < 0.05),
+                                                          n_0.01 = sum(BH.mul.adj.p < 0.01),
+                                                          n_0.001 = sum(BH.mul.adj.p < 0.001),
+                                                          n_0.0001 = sum(BH.mul.adj.p < 0.0001),
+                                                          n_0.00001 = sum(BH.mul.adj.p < 0.00001))
+
+
+draw.venndiagram <- function(total.aov.final, p.cutoff = 0.0001, direction = "up"){
+    
+    total.aov.bf.final <- total.aov.final
+    BH.mul.adj.p.cutoff <- p.cutoff
+    up.CLF_CLS    <- total.aov.bf.final %>% filter(BH.mul.adj.p < BH.mul.adj.p.cutoff, case == 'CLS-CLF', type == direction) %>% with(Probe)
+    up.Sphere_CLS <- total.aov.bf.final %>% filter(BH.mul.adj.p < BH.mul.adj.p.cutoff, case == 'Sphere-CLS', type == direction) %>% with(Probe)
+    
+    title.area1 <- paste("P6+fibroblast", switch(direction, up = ">", down = "<"),"P6")
+    title.area2 <- paste("P6-Sphere", switch(direction, up = ">", down = "<"), "P6")
+    
+    area.1 <- length(up.CLF_CLS  )
+    area.2 <- length(up.Sphere_CLS)
+    area.12 <- length(intersect(up.CLF_CLS, up.Sphere_CLS))
+    area.list <- list(area.1, area.2, area.12)
+    draw.pairwise.venn(area1 = area.list[[1]], area2 = area.list[[2]], cross.area = area.list[[3]],
+                       category = c(title.area1, title.area2),
+                       fill = c("Blue","Red"))}
+
+# Upregulation
+draw.venndiagram(total.aov.final = total.aov.bf.final, p.cutoff = 0.0001, direction = "up" )
+# Downregulation
+draw.venndiagram(total.aov.final = total.aov.bf.final, p.cutoff = 0.0001, direction = "down" )
+
+
+
+
+
+# QN, Log2, Annova, Holm --------------------------------------------------
+
+aov.hm.final <- left_join(aov.holm.final, aov.norm, by = "Probe")
+
+
+up.aov.hm.CLF_CLS       <- aov.hm.final %>% filter(case == 'CLS-CLF', CLF_CLS > 0) %>% mutate(BH.mul.adj.p = p.adjust(p.value, method ="BH"), type = "up") %>% dplyr::select(-c(group1,group2))
+down.aov.hm.CLF_CLS     <- aov.hm.final %>% filter(case == 'CLS-CLF', CLF_CLS < 0) %>% mutate(BH.mul.adj.p = p.adjust(p.value, method ="BH"), type = "down") %>% dplyr::select(-c(group1,group2))
+
+
+up.aov.hm.Sphere_CLS    <- aov.hm.final %>% filter(case == 'Sphere-CLS', Sphere_CLS > 0) %>% mutate(BH.mul.adj.p = p.adjust(p.value, method ="BH"), type = "up") %>% dplyr::select(-c(group1,group2))
+down.aov.hm.Sphere_CLS  <- aov.hm.final %>% filter(case == 'Sphere-CLS', Sphere_CLS < 0) %>% mutate(BH.mul.adj.p = p.adjust(p.value, method ="BH"), type = "down") %>% dplyr::select(-c(group1,group2))
+
+
+
+total.aov.hm.final <- bind_rows(up.aov.hm.CLF_CLS, down.aov.hm.CLF_CLS, up.aov.hm.Sphere_CLS, down.aov.hm.Sphere_CLS)
+
+total.aov.hm.final %>% group_by(case, type) %>% summarise(n_0.05 = sum(BH.mul.adj.p < 0.05),
+                                                          n_0.01 = sum(BH.mul.adj.p < 0.01),
+                                                          n_0.001 = sum(BH.mul.adj.p < 0.001),
+                                                          n_0.0001 = sum(BH.mul.adj.p < 0.0001),
+                                                          n_0.00001 = sum(BH.mul.adj.p < 0.00001))
+# Upregulation
+draw.venndiagram(total.aov.final = total.aov.hm.final, p.cutoff = 0.0001, direction = "up" )
+# Downregulation
+draw.venndiagram(total.aov.final = total.aov.hm.final, p.cutoff = 0.0001, direction = "down" )
+
+# QN, Log2, Annova, BH ----------------------------------------------------
+
+aov.bjh.final <- left_join(aov.bamjamin.final, aov.norm, by = "Probe")
+
+
+up.aov.bjh.CLF_CLS       <- aov.bjh.final %>% filter(case == 'CLS-CLF', CLF_CLS > 0) %>% mutate(BH.mul.adj.p = p.adjust(p.value, method ="BH"), type = "up") %>% dplyr::select(-c(group1,group2))
+down.aov.bjh.CLF_CLS     <- aov.bjh.final %>% filter(case == 'CLS-CLF', CLF_CLS < 0) %>% mutate(BH.mul.adj.p = p.adjust(p.value, method ="BH"), type = "down") %>% dplyr::select(-c(group1,group2))
+
+
+up.aov.bjh.Sphere_CLS    <- aov.bjh.final %>% filter(case == 'Sphere-CLS', Sphere_CLS > 0) %>% mutate(BH.mul.adj.p = p.adjust(p.value, method ="BH"), type = "up") %>% dplyr::select(-c(group1,group2))
+down.aov.bjh.Sphere_CLS  <- aov.bjh.final %>% filter(case == 'Sphere-CLS', Sphere_CLS < 0) %>% mutate(BH.mul.adj.p = p.adjust(p.value, method ="BH"), type = "down") %>% dplyr::select(-c(group1,group2))
+
+
+
+total.aov.bjh.final <- bind_rows(up.aov.bjh.CLF_CLS, down.aov.bjh.CLF_CLS, up.aov.bjh.Sphere_CLS, down.aov.bjh.Sphere_CLS)
+
+total.aov.bjh.final %>% group_by(case, type) %>% summarise(n_0.05 = sum(BH.mul.adj.p < 0.05),
+                                                           n_0.01 = sum(BH.mul.adj.p < 0.01),
+                                                           n_0.001 = sum(BH.mul.adj.p < 0.001),
+                                                           n_0.0001 = sum(BH.mul.adj.p < 0.0001),
+                                                           n_0.00001 = sum(BH.mul.adj.p < 0.00001))
+
+save(total.aov.bf.final, total.aov.bjh.final, total.aov.hm.final, file = "total_aov_updown_result.Rdata")
+# Upregulation
+draw.venndiagram(total.aov.final = total.aov.bjh.final, p.cutoff = 0.0001, direction = "up" )
+# Downregulation
+draw.venndiagram(total.aov.final = total.aov.bjh.final, p.cutoff = 0.0001, direction = "down" )
 
 # SOM -------------------------------------------------------------------
 

@@ -690,6 +690,15 @@ test.annova.result  <- foreach(i = 1:nrow(norm)) %dopar% {
     aov(norm[i,] ~ ex.design) 
 }
 
+
+
+# _Post-hoc ---------------------------------------------------------------
+
+
+# __TukeyHSD --------------------------------------------------------------
+
+
+
 test.tukey.result  <- foreach(i = 1:nrow(norm)) %dopar% {
     TukeyHSD(test.annova.result[[i]]) %>%
         tidy %>%
@@ -748,7 +757,7 @@ test.tukey.result.p.value <- unlist(test.tukey.result.p.value)
 # Step 6 
 test.tukey.result.dataframe.mutate  <- foreach(i = 1:nrow(norm)) %dopar% {
   test.tukey.result.dataframe[[i]]%>% mutate(annova.p.value = test.tukey.result.p.value[[i]],
-                                             probe = probe.name[[i]]) %>% rename(case=`.rownames`)
+                                             Probe = probe.name[[i]]) %>% rename(case=`.rownames`)
 }
 
 # Step 7
@@ -756,14 +765,60 @@ test.tukey.final.result <- invoke(rbind, map(test.tukey.result.dataframe.mutate,
 Sys.time()
 
 # Step 8 annotate
-test.tukey.final.result <- test.tukey.final.result %>% rename(Probe=probe)
 test.tukey.final.result <- left_join(test.tukey.final.result, annotated.entrez.symbol, by="Probe")
 
+# __Holm ------------------------------------------------------------------
+registerDoParallel(cores=4)
+
+system.time(test.aov.holm.result  <- foreach(i = 1:nrow(norm)) %dopar% {
+    pairwise.t.test(norm[i,],ex.design,p.adjust="holm")
+})
 
 
+system.time(tidy.test.aov.holm.result         <- foreach(i = 1:nrow(norm)) %dopar% {
+    test.aov.holm.result[[i]] %>% broom::tidy() %>% dplyr::slice(c(1,3))
+})
+
+system.time(tidy.aov.holm.result <- foreach( i = 1:nrow(norm)) %dopar% {
+tidy.test.aov.holm.result[[i]] %>% mutate(Probe=probe.name[[i]], case=paste0(group1,"-",group2))
+})
+
+system.time(aov.holm.final <- invoke(rbind, map(tidy.aov.holm.result, data.frame)))
 
 
+# __BH ------------------------------------------------------------------------
+system.time(test.aov.bamjamin.result  <- foreach(i = 1:nrow(norm)) %dopar% {
+    pairwise.t.test(norm[i,],ex.design,p.adjust="BH")
+})
 
+
+system.time(tidy.test.aov.bamjamin.result <- foreach(i = 1:nrow(norm)) %dopar% {
+    test.aov.bamjamin.result[[i]] %>% broom::tidy() %>% dplyr::slice(c(1,3))
+})
+
+system.time(tidy.aov.bamjamin.result <- foreach(i = 1:nrow(norm)) %dopar% {
+    tidy.test.aov.bamjamin.result[[i]] %>% mutate(Probe=probe.name[[i]], case=paste0(group1,"-",group2))
+})
+
+aov.bamjamin.final <- invoke(rbind, map(tidy.aov.bamjamin.result, data.frame))
+# __Bonferroni ----------------------------------------------------------------
+
+system.time(test.aov.bonferroni.result  <- foreach(i = 1:nrow(norm)) %dopar% {
+    pairwise.t.test(norm[i,],ex.design,p.adjust="bonferroni")
+})
+
+
+tidy.test.aov.bonferroni.result <- foreach(i = 1:nrow(norm)) %dopar% {
+    test.aov.bonferroni.result[[i]] %>% broom::tidy() %>% dplyr::slice(c(1,3))
+}
+
+system.time(tidy.aov.bonferroni.result <- foreach(i = 1:nrow(norm)) %dopar% {
+    tidy.test.aov.bonferroni.result[[i]] %>% mutate(Probe=probe.name[[i]], case=paste0(group1,"-",group2))
+}
+)
+system.time(aov.bonferroni.final <- invoke(rbind, map(tidy.aov.bonferroni.result, data.frame)))
+
+save(aov.holm.final, aov.bamjamin.final, aov.bonferroni.final, file="pairttest_holm_bh_bf_dataframe.Rdata")
 # Appendix: Annotation  -------------------------------------------------------------
 # the library dependence
 library(hgu133plus2.db)
@@ -792,8 +847,36 @@ hgu133plus2.probe.annotate <- gconvert(hgu133plus2.probe,
                                        df =T)
 #turn upper to lower
 hgu133plus2.probe.annotate <- hgu133plus2.probe.annotate %>% mutate(Probe=tolower(alias))
+
+#add the information of entrezid
+Symbol_Entrezid <- AnnotationDbi::select(org.Hs.eg.db,
+                                         keys = hgu133plus2.probe.annotate$name ,
+                                         columns = c("ENTREZID"),
+                                         keytype = "SYMBOL")
+colnames(Symbol_Entrezid) <- c("name","ENTREZID")
+hgu133plus2.probe.annotate <- left_join(hgu133plus2.probe.annotate, Symbol_Entrezid, by="name") %>% unique
+
+#filter some duplicated annotatione 
+dup.prob <- hgu133plus2.probe.annotate.v1$Probe[duplicated(hgu133plus2.probe.annotate.v1$Probe)]
+dup.annotated.probe <- hgu133plus2.probe.annotate.v1 %>% filter(Probe %in% dup.prob)
+dup.symbol <- dup.annotated.probe$name %>% unique()
+right.entrzid <- annotated.entrez.symbol %>% filter(Symbol %in% dup.symbol) %>% with(EntrezID)
+not.used.entrezid <- dup.annotated.probe %>% filter(!(ENTREZID %in% right.entrzid)) %>% with(ENTREZID)
+
+hgu133plus2.probe.annotate.v1 <- hgu133plus2.probe.annotate.v1 %>% filter(!(ENTREZID %in% not.used.entrezid ))
+dup.prob <- hgu133plus2.probe.annotate.v1$Probe[duplicated(hgu133plus2.probe.annotate.v1$Probe)]
+
+
+probe_6421 <-  annotated.entrez.symbol %>% filter(Symbol == "SFPQ", EntrezID == "6421") %>% with(Probe)
+probe_654780 <-  annotated.entrez.symbol %>% filter(Symbol == "SFPQ", EntrezID == "654780") %>% with(Probe)
+
+hgu133plus2.probe.annotate.v1$ENTREZID[hgu133plus2.probe.annotate.v1$Probe %in% probe_6421] <- "6421"
+hgu133plus2.probe.annotate.v1$ENTREZID[hgu133plus2.probe.annotate.v1$Probe %in% probe_654780] <- "654780"
+
+hgu133plus2.probe.annotate.v1 <- hgu133plus2.probe.annotate.v1 %>% unique
+
 #save to RData
-save(hgu133plus2.probe.annotate, file="hgu133plus2_annotation.RData")
+save(hgu133plus2.probe.annotate, file="hgu133plus2_annotation_v1.RData")
 
 
 # unnotated.probe <- total.probe.data.frame[is.na(total.probe.data.frame$Gene),]
