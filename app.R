@@ -1,16 +1,30 @@
 library(shiny)
+library(gProfileR)
 library(plotly)
 library(PANTHER.db)
 library(RColorBrewer)
-library(GO.db)
-source("/Users/Weitinglin/Documents/Repository/code_in_lab/00_microarry_function.R")
-load("/Users/Weitinglin/Documents/Repository/code_in_lab/total_ttest_result.Rdata")
-load("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/data/intermediate/hgu133plus2.RData")
-load("/Users/Weitinglin/Documents/Repository/code_in_lab/total_probe_dataframe.Rdata")
-load("/Users/Weitinglin/Documents/Repository/code_in_lab/annotated_entrez_symbol.Rdata")
-load("/Users/Weitinglin/Documents/Repository/code_in_lab/hgu133plus2_annotation.RData")
-load("/Users/Weitinglin/Documents/Repository/code_in_lab/Exprs_data.RData")
-pthOrganisms(PANTHER.db) <- "HUMAN"
+library(ggplot2)
+library(dplyr)
+library(annotate)
+library(hgu133plus2.db)
+library(readr)
+library(latticeExtra)
+library(purrr)
+library(rprojroot)
+library(markdown)
+library(tidyr)
+library(httr)
+library(rjson)
+library(DT)
+library(VennDiagram)
+source("00_microarry_function.R")
+load("total_ttest_result.Rdata")
+load("hgu133plus2.RData")
+load("total_probe_dataframe.Rdata")
+load("annotated_entrez_symbol.Rdata")
+load("hgu133plus2_annotation.RData")
+load("Exprs_data.RData")
+#pthOrganisms(PANTHER.db) <- "HUMAN"
 
 
 # Preprocess --------------------------------------------------------------
@@ -170,7 +184,7 @@ ui <- tagList(
             fluidRow(
                 column(1),
                 column(5, plotOutput(outputId = "Gene.MAplot")),
-                column(4, dataTableOutput('Gene.number')),
+                column(4, dataTableOutput(outputId = 'Gene.number')),
                 column(2)
                ),
             fluidRow(
@@ -231,6 +245,12 @@ ui <- tagList(
                      column(1, actionButton(inputId = "Final.go",label = "Calculate!")),
                      column(2,helpText('調整完條件後，按Calculate鈕！'))
                  ),
+                 fluidRow(
+                     column(1),
+                     column(5, helpText('Both Up regulation gene in P6+fibroblast and P6-sphere compare to P6 ')),
+                     column(5,helpText('Both Down regulation gene in P6+fibroblast and P6-sphere compare to P6')),
+                     column(1)
+                 ),
                 fluidRow(
                 column(1),
                 column(5,plotOutput(outputId = "Final.venn.up")),
@@ -247,6 +267,18 @@ ui <- tagList(
                 ),
                 fluidRow(
                     plotlyOutput(outputId = "Final.3d")
+                ),
+                fluidRow(
+                    column(1),
+                    column(5,dataTableOutput(outputId = "Final.up.panther")),
+                    column(5,dataTableOutput(outputId = "Final.down.panther")),
+                    column(1)
+                ),
+                fluidRow(
+                    column(1),
+                    column(5,dataTableOutput(outputId = "Final.up.pathway")),
+                    column(5,dataTableOutput(outputId = "Final.down.pathway")),
+                    column(1)
                 )
             )
         ) 
@@ -548,10 +580,105 @@ server <- function(input, output){
                                  zaxis = list(title = 'Sphere')))
          
      })
+     # Reactive data -----------------------------------------------------------
+     panther.up.result <- reactive({
+         
+         panther.probe <- intersect(up.CLF_CLS(), up.Sphere_CLS())
+         tmp <- annotated.entrez.symbol %>% filter(Probe %in% panther.probe)
+         tmp.EntrezID <- tmp$EntrezID[!is.na(tmp$EntrezID)]
+         k <- tmp.EntrezID
+         choice <- c("CLASS_TERM")
+         PANTHER.db::select(PANTHER.db,
+                            keys = k,
+                            columns = choice,
+                            keytype = "ENTREZ")   
+     })
      
+     panther.down.result <- reactive({
+         
+         panther.probe <-intersect(down.CLF_CLS(), down.Sphere_CLS())
+         tmp <- annotated.entrez.symbol %>% filter(Probe %in% panther.probe)
+         tmp.EntrezID <- tmp$EntrezID[!is.na(tmp$EntrezID)]
+         k <- tmp.EntrezID
+         choice <- c("CLASS_TERM")
+         PANTHER.db::select(PANTHER.db,
+                            keys = k,
+                            columns = choice,
+                            keytype = "ENTREZ")   
+     })
+     
+     panther.up.pathway <- reactive({
+         
+         panther.probe <- intersect(up.CLF_CLS(), up.Sphere_CLS())
+         tmp <- annotated.entrez.symbol %>% filter(Probe %in% panther.probe)
+         tmp.EntrezID <- tmp$EntrezID[!is.na(tmp$EntrezID)]
+         k <- tmp.EntrezID
+         choice <- c("PATHWAY_TERM")
+         PANTHER.db::select(PANTHER.db,
+                            keys = k,
+                            columns = choice,
+                            keytype = "ENTREZ")   
+     })
+     
+     panther.down.pathway <- reactive({
+         
+         panther.probe <-intersect(down.CLF_CLS(), down.Sphere_CLS())
+         tmp <- annotated.entrez.symbol %>% filter(Probe %in% panther.probe)
+         tmp.EntrezID <- tmp$EntrezID[!is.na(tmp$EntrezID)]
+         k <- tmp.EntrezID
+         choice <- c("PATHWAY_TERM")
+         PANTHER.db::select(PANTHER.db,
+                            keys = k,
+                            columns = choice,
+                            keytype = "ENTREZ")   
+     })
+     # Output$Final.up.panther -------------------------------------------------
+     output$Final.up.panther <- renderDataTable({
+         
+         #panther.result() %>% filter(!is.na(CLASS_TERM)) %>% ggplot + geom_bar(aes(x = CLASS_TERM)) + coord_polar(theta = "x", direction=1)
+         #panther.up.result()$CLASS_TERM %>% table %>% sort() %>% as.data.frame %>% arrange(desc(Freq))
+         left_join(panther.up.result()%>%rename(EntrezID=ENTREZ),annotated.entrez.symbol,by = "EntrezID")
+     })
+     # Output$Final.down.panther -----------------------------------------------
+     output$Final.down.panther <- renderDataTable({
+         
+         #panther.result() %>% filter(!is.na(CLASS_TERM)) %>% ggplot + geom_bar(aes(x = CLASS_TERM)) + coord_polar(theta = "x", direction=1)
+         #panther.down.result()$CLASS_TERM %>% table %>% sort() %>% as.data.frame %>% arrange(desc(Freq))
+         left_join(panther.down.result()%>%rename(EntrezID=ENTREZ),annotated.entrez.symbol,by = "EntrezID")
+     })
+     # Output$Final.up.pathway -------------------------------------------------
+     
+     output$Final.up.pathway <- renderDataTable({
+         
+         #panther.result() %>% filter(!is.na(CLASS_TERM)) %>% ggplot + geom_bar(aes(x = CLASS_TERM)) + coord_polar(theta = "x", direction=1)
+         #panther.up.pathway()$PATHWAY_TERM %>% table %>% sort() %>% as.data.frame %>% arrange(desc(Freq))
+         left_join(panther.up.pathway()%>%rename(EntrezID=ENTREZ),annotated.entrez.symbol,by = "EntrezID")
+     })
+     # Output$Final.down.pathway -----------------------------------------------
+     output$Final.down.pathway <- renderDataTable({
+         
+         #panther.result() %>% filter(!is.na(CLASS_TERM)) %>% ggplot + geom_bar(aes(x = CLASS_TERM)) + coord_polar(theta = "x", direction=1)
+         #panther.down.pathway()$PATHWAY_TERM %>% table %>% sort() %>% as.data.frame %>% arrange(desc(Freq))
+         left_join(panther.down.pathway()%>%rename(EntrezID=ENTREZ),annotated.entrez.symbol,by = "EntrezID")
+     })
      
      
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

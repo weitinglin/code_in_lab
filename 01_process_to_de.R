@@ -5,7 +5,7 @@
 
 #library in the source R code
 
-source("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/analysis/microarry_function.R")
+source("/Users/Weitinglin/Documents/Repository/code_in_lab/00_microarry_function.R")
 
 
 
@@ -13,11 +13,18 @@ source("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/analysis/microarry_
 
 
 #=====================input the data================================
-data.path  <- file.path("/Users/Weitinglin/Documents/2016 實驗室資料處理/201510 microarray/raw data 20100114/set 8 CLS CLF Sphere")
+data.path  <- file.path("/Volumes/2016weiting/lab_data/validationdataset/Raw_data/GSE19804/GSE19804_RAW")
+
 experiment.set <- c ( rep ("set8_withfibroblast" , 3 ) , rep ( "set8_withoutfibroblast" , 3 ), rep("set8_sphere", 3) )
 
-
-celfile.set <- do_phenodata(data.path = data.path, experiment.set = experiment.set)
+set<- list.files (data.path, pattern=".CEL.gz")
+phenodata.set   <- matrix ( rep ( set, 2) , ncol = 2 )
+phenodata.set   <- as.data.frame ( phenodata.set )
+colnames ( phenodata.set )   <- c ( "Name" , "FileName" )
+phenodata.set$experiment.set <- experiment.set
+write.table(phenodata.set, paste(data.path,"/phenodata_set.txt", sep = ""),quote=F,sep="\t",row.names=F)
+print("save the file! in to a phenodata_set.txt")
+celfile.set <- ReadAffy ( celfile.path = data.path , phenoData = paste(data.path,"/phenodata_set.txt", sep = "") )
 
 #=====================preprocess the data ======
 #use the mas5,in order not to log twice
@@ -280,6 +287,7 @@ target.probe <- probererlateTF %>% filter(Probe %in% target.list)
 # EX03: MASS, QN, no LOG2, Wilcoxon-rank sum test -------------------------
 # 2016.11.15
 ecelfile.set <- exprs ( Exprs.data )
+
 
 
 # do the quantile normalization 
@@ -671,6 +679,153 @@ lapply(chdir_analysis_example$chdirprops[[1]],head)
 chdir_analysis_example$chdirprops$number_sig_genes
 
 
+# EX08 MAS5, QN, LOG2, ANNOVA ---------------------------------------------
+ecelfile.set <- exprs ( Exprs.data )
+
+#QN + log2
+
+norm <- quantile_normalization(ecelfile.set = ecelfile.set, method="median")
+
+#annova
+annova_test <- function(norm){
+registerDoParallel(cores=16)
+ex.design <- factor(c(rep("CLF",3), rep("CLS",3), rep("Sphere",3)))
+
+probe.name <- rownames(norm)
+
+test.annova.result  <- foreach(i = 1:nrow(norm)) %dopar% {
+    aov(norm[i,] ~ ex.design) 
+}
+
+
+
+# _Post-hoc ---------------------------------------------------------------
+
+
+# __TukeyHSD --------------------------------------------------------------
+
+
+
+test.tukey.result  <- foreach(i = 1:nrow(norm)) %dopar% {
+    TukeyHSD(test.annova.result[[i]]) %>%
+        tidy %>%
+        filter(comparison != "Sphere-CLF") %>%
+        mutate(annova.p.value=(test.annova.result[[i]] %>%
+                                   tidy() %>%
+                                   select(p.value))[[1]][1], probe = probe.name[i])
+}
+
+test.tukey.result <- invoke(rbind, map(test.tukey.result,data.frame)) %>% select(-term)
+return(test.tukey.result)
+}
+
+annova.tukey.result <- annova_test(norm)
+
+# not use the doparrell
+ex.design <- factor(c(rep("CLF",3), rep("CLS",3), rep("Sphere",3)))
+probe.name <- rownames(norm)
+
+test.annova.result <- list()
+test.tukey.result  <- list()
+Sys.time()
+# Step 1
+for (i in 1:length(norm)){
+    test.annova.result[[i]] <- aov(norm[i,] ~ ex.design)
+}
+Sys.time()
+save(test.annova.result, file="test_annova_result.Rdata")
+# Step 2
+for ( i in 1:length(norm)){
+    test.tukey.result[[i]] <- TukeyHSD(test.annova.result[[i]])
+    mem_used()
+    print(i)
+}
+
+Sys.time()
+# Step 3
+test.tukey.result  <- foreach(i = 1:nrow(norm)) %dopar% {
+  TukeyHSD(test.annova.result[[i]]) 
+}
+save(test.tukey.result, file="test_tukey_result.Rdata")
+Sys.time()
+
+# Step 4
+test.tukey.result.dataframe  <- foreach(i = 1:nrow(norm)) %dopar% {
+  test.tukey.result[[i]]  %>% with(ex.design) %>% tidy()
+}
+
+# Step 5
+test.tukey.result.p.value  <- foreach(i = 1:nrow(norm)) %dopar% {
+  test.annova.result[[i]] %>% tidy %>% slice_(1) %>% with(p.value)
+}
+rm(test.annova.result)
+test.tukey.result.p.value <- unlist(test.tukey.result.p.value)
+
+# Step 6 
+test.tukey.result.dataframe.mutate  <- foreach(i = 1:nrow(norm)) %dopar% {
+  test.tukey.result.dataframe[[i]]%>% mutate(annova.p.value = test.tukey.result.p.value[[i]],
+                                             Probe = probe.name[[i]]) %>% rename(case=`.rownames`)
+}
+
+# Step 7
+test.tukey.final.result <- invoke(rbind, map(test.tukey.result.dataframe.mutate,data.frame)) 
+Sys.time()
+
+# Step 8 annotate
+test.tukey.final.result <- left_join(test.tukey.final.result, annotated.entrez.symbol, by="Probe")
+
+# __Holm ------------------------------------------------------------------
+registerDoParallel(cores=4)
+
+system.time(test.aov.holm.result  <- foreach(i = 1:nrow(norm)) %dopar% {
+    pairwise.t.test(norm[i,],ex.design,p.adjust="holm")
+})
+
+
+system.time(tidy.test.aov.holm.result         <- foreach(i = 1:nrow(norm)) %dopar% {
+    test.aov.holm.result[[i]] %>% broom::tidy() %>% dplyr::slice(c(1,3))
+})
+
+system.time(tidy.aov.holm.result <- foreach( i = 1:nrow(norm)) %dopar% {
+tidy.test.aov.holm.result[[i]] %>% mutate(Probe=probe.name[[i]], case=paste0(group1,"-",group2))
+})
+
+system.time(aov.holm.final <- invoke(rbind, map(tidy.aov.holm.result, data.frame)))
+
+
+# __BH ------------------------------------------------------------------------
+system.time(test.aov.bamjamin.result  <- foreach(i = 1:nrow(norm)) %dopar% {
+    pairwise.t.test(norm[i,],ex.design,p.adjust="BH")
+})
+
+
+system.time(tidy.test.aov.bamjamin.result <- foreach(i = 1:nrow(norm)) %dopar% {
+    test.aov.bamjamin.result[[i]] %>% broom::tidy() %>% dplyr::slice(c(1,3))
+})
+
+system.time(tidy.aov.bamjamin.result <- foreach(i = 1:nrow(norm)) %dopar% {
+    tidy.test.aov.bamjamin.result[[i]] %>% mutate(Probe=probe.name[[i]], case=paste0(group1,"-",group2))
+})
+
+aov.bamjamin.final <- invoke(rbind, map(tidy.aov.bamjamin.result, data.frame))
+# __Bonferroni ----------------------------------------------------------------
+
+system.time(test.aov.bonferroni.result  <- foreach(i = 1:nrow(norm)) %dopar% {
+    pairwise.t.test(norm[i,],ex.design,p.adjust="bonferroni")
+})
+
+
+tidy.test.aov.bonferroni.result <- foreach(i = 1:nrow(norm)) %dopar% {
+    test.aov.bonferroni.result[[i]] %>% broom::tidy() %>% dplyr::slice(c(1,3))
+}
+
+system.time(tidy.aov.bonferroni.result <- foreach(i = 1:nrow(norm)) %dopar% {
+    tidy.test.aov.bonferroni.result[[i]] %>% mutate(Probe=probe.name[[i]], case=paste0(group1,"-",group2))
+}
+)
+system.time(aov.bonferroni.final <- invoke(rbind, map(tidy.aov.bonferroni.result, data.frame)))
+
+save(aov.holm.final, aov.bamjamin.final, aov.bonferroni.final, file="pairttest_holm_bh_bf_dataframe.Rdata")
 # Appendix: Annotation  -------------------------------------------------------------
 # the library dependence
 library(hgu133plus2.db)
@@ -699,8 +854,36 @@ hgu133plus2.probe.annotate <- gconvert(hgu133plus2.probe,
                                        df =T)
 #turn upper to lower
 hgu133plus2.probe.annotate <- hgu133plus2.probe.annotate %>% mutate(Probe=tolower(alias))
+
+#add the information of entrezid
+Symbol_Entrezid <- AnnotationDbi::select(org.Hs.eg.db,
+                                         keys = hgu133plus2.probe.annotate$name ,
+                                         columns = c("ENTREZID"),
+                                         keytype = "SYMBOL")
+colnames(Symbol_Entrezid) <- c("name","ENTREZID")
+hgu133plus2.probe.annotate <- left_join(hgu133plus2.probe.annotate, Symbol_Entrezid, by="name") %>% unique
+
+#filter some duplicated annotatione 
+dup.prob <- hgu133plus2.probe.annotate.v1$Probe[duplicated(hgu133plus2.probe.annotate.v1$Probe)]
+dup.annotated.probe <- hgu133plus2.probe.annotate.v1 %>% filter(Probe %in% dup.prob)
+dup.symbol <- dup.annotated.probe$name %>% unique()
+right.entrzid <- annotated.entrez.symbol %>% filter(Symbol %in% dup.symbol) %>% with(EntrezID)
+not.used.entrezid <- dup.annotated.probe %>% filter(!(ENTREZID %in% right.entrzid)) %>% with(ENTREZID)
+
+hgu133plus2.probe.annotate.v1 <- hgu133plus2.probe.annotate.v1 %>% filter(!(ENTREZID %in% not.used.entrezid ))
+dup.prob <- hgu133plus2.probe.annotate.v1$Probe[duplicated(hgu133plus2.probe.annotate.v1$Probe)]
+
+
+probe_6421 <-  annotated.entrez.symbol %>% filter(Symbol == "SFPQ", EntrezID == "6421") %>% with(Probe)
+probe_654780 <-  annotated.entrez.symbol %>% filter(Symbol == "SFPQ", EntrezID == "654780") %>% with(Probe)
+
+hgu133plus2.probe.annotate.v1$ENTREZID[hgu133plus2.probe.annotate.v1$Probe %in% probe_6421] <- "6421"
+hgu133plus2.probe.annotate.v1$ENTREZID[hgu133plus2.probe.annotate.v1$Probe %in% probe_654780] <- "654780"
+
+hgu133plus2.probe.annotate.v1 <- hgu133plus2.probe.annotate.v1 %>% unique
+
 #save to RData
-save(hgu133plus2.probe.annotate, file="hgu133plus2_annotation.RData")
+save(hgu133plus2.probe.annotate, file="hgu133plus2_annotation_v1.RData")
 
 
 # unnotated.probe <- total.probe.data.frame[is.na(total.probe.data.frame$Gene),]
@@ -790,6 +973,145 @@ ggplot(data = combine, aes(x = value)) +
 
 
 
-#for CLS-CLF
+
+# ==================== *******************************************************----------------------------------------------------
+
+# EX09 --------------------------------------------------------------------
+#=====================input the data================================
+data.path  <- file.path("/Users/Weitinglin/Documents/2016 實驗室資料處理/201510 microarray/raw data 20100114/set 9 CLS Sphere")
+experiment.set <- c ( rep ("set9_CLS_P0" , 3 ) , rep ( "set9_CLS_Sphere" , 3 ) )
+
+
+celfile.set <- do_phenodata(data.path = data.path, experiment.set = experiment.set)
+
+#=====================preprocess the data ======
+# use the mas5
+Set9.Exprs.data <- mas5 ( celfile.set , normalize = FALSE, analysis = "absolute", sc = 500)
+
+# save the temporary file
+save(Set9.Exprs.data, file="Set9_Exprs_data.RData")
+
+# expression profile
+ecelfile.set <- exprs ( Set9.Exprs.data )
+
+# quantile normalization
+norm <- quantile_normalization(ecelfile.set = ecelfile.set,  method="median")
+
+# t-test
+
+
+registerDoParallel(cores=8)
+#function
+
+t_test <- function(tmp, hypothesis = "two.sides", adj.method = "BH"){
+
+gene.list <- rownames(tmp)
+hypothesis <-  "two.sided"
+
+set.t.bamjamin.result  <- foreach(i = 1:nrow(tmp)) %dopar% {
+    t.test(tmp[i,1:3], tmp[i,4:6], alternative = hypothesis, paired = FALSE,  conf.level = 0.95) 
+}
+
+
+tmp.tidy.set.t.bamjamin.result <- foreach(i = 1:nrow(tmp)) %dopar% {
+    set.t.bamjamin.result[[i]] %>% broom::tidy() 
+}
+
+tidy.set.t.bamjamin.result <- foreach(i = 1:nrow(tmp)) %dopar% {
+    tmp.tidy.set.t.bamjamin.result[[i]] %>%  mutate(gene = gene.list[i])
+}
+
+set.t.bamjamin.final.result<- invoke(rbind, map(tidy.set.t.bamjamin.result, data.frame))
+set.t.bamjamin.final.result <- set.t.bamjamin.final.result %>% mutate(adjusted.p = p.adjust(p.value, method=adj.method),
+                                    adjusted.method = adj.method)
+return(set.t.bamjamin.final.result)
+}
+# EX10 --------------------------------------------------------------------
+
+data.path  <- file.path("/Users/Weitinglin/Documents/2016 實驗室資料處理/201510 microarray/raw data 20100114/set 10 CLS Sphere  TimeSeries")
+experiment.set <- c ( rep ("set10_CLS_P0" , 3 ) , rep ( "set10_CLS_Sphere" , 3 ) , rep ( "set10_CLS_Timeseies" , 3 ) )
+setwd(data.path)
+
+celfile.set <- do_phenodata(data.path = data.path, experiment.set = experiment.set)
+
+#=====================preprocess the data ======
+# use the mas5
+Set10.Exprs.data <- mas5 ( celfile.set , normalize = FALSE, analysis = "absolute", sc = 500)
+
+# save the temporary file
+setwd("/Users/Weitinglin/Documents/Repository/code_in_lab")
+save(Set10.Exprs.data, file="Set10_Exprs_data.RData")
+
+# expression profile
+ecelfile.set <- exprs ( Set10.Exprs.data )
+
+# quantile normalization
+norm <- quantile_normalization(ecelfile.set = ecelfile.set,  method="median")
+
+# t.test
+set10.t.result <- t_test(norm, adj.method = "BH", hypothesis = "two.sided")
+
+# GSEA analysis -----------------------------------------------------------
+load("~/Documents/Repository/code_in_lab/norm_qn_log.Rdata")
+norm.tmp         <- norm[,c(1,2,3,4,5,6)]
+norm.name        <- rownames(norm.tmp)
+norm.description <- rep("na", nrow(norm.tmp))
+
+norm.tmp <- as.data.frame(norm.tmp)
+norm.tmp$NAME <- norm.name
+norm.tmp$DESCRIPTION <- norm.description
+colnames(norm.tmp) <- c("Sphere.1","Sphere.2","Sphere.3", "Sphere.1","Sphere.2","Sphere.3", "Name", "Description")
+norm.tmp <- norm.tmp[,c(7,8,1:6)]
+write.table(norm.tmp, file="set10_SphereCLS_norm_qn.gct", quote = FALSE, row.names = FALSE, col.names = TRUE, sep="\t")
+
+# EX11 --------------------------------------------------------------------
+
+data.path  <- file.path("/Users/Weitinglin/Documents/2016 實驗室資料處理/201510 microarray/raw data 20100114/set 11 CAF Sphere")
+experiment.set <- c ( rep ("set11_Sphere" , 3 ) , rep ( "set11_CLF" , 3 ))
+setwd(data.path)
+
+celfile.set <- do_phenodata(data.path = data.path, experiment.set = experiment.set)
+
+#=====================preprocess the data ======
+# use the mas5
+Set11.Exprs.data <- mas5 ( celfile.set , normalize = FALSE, analysis = "absolute", sc = 500)
+
+# save the temporary file
+setwd("/Users/Weitinglin/Documents/Repository/code_in_lab")
+save(Set11.Exprs.data, file="Set11_Exprs_data.RData")
+
+# expression profile
+ecelfile.set <- exprs ( Set11.Exprs.data )
+
+# quantile normalization
+norm <- quantile_normalization(ecelfile.set = ecelfile.set,  method="median")
+
+# t.test
+set11.t.result <- t_test(norm, adj.method = "BH", hypothesis = "two.sided")
+
+
+
+
+save(set11.t.result, file="Set11_ttestBH.Rdata")
+
+
+
+
+
+
+# EX12 --------------------------------------------------------------------
+data.path  <- file.path("/Users/Weitinglin/Documents/2016 實驗室資料處理/201510 microarray/raw data 20100114/set 12 Sphere  Timeseries")
+experiment.set <- c ( rep ("set12_CLS_Sphere" , 3 ) , rep ( "set12_CLF" , 3 ))
+setwd(data.path)
+
+celfile.set <- do_phenodata(data.path = data.path, experiment.set = experiment.set)
+
+#=====================preprocess the data ======
+# use the mas5
+Set11.Exprs.data <- mas5 ( celfile.set , normalize = FALSE, analysis = "absolute", sc = 500)
+
+# save the temporary file
+setwd("/Users/Weitinglin/Documents/Repository/code_in_lab")
+save(Set11.Exprs.data, file="Set11_Exprs_data.RData")
 
 

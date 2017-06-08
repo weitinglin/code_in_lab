@@ -30,7 +30,7 @@ library(rjson)
 library(DT)
 library(VennDiagram)
 #bioconductor
-source("https://bioconductor.org/biocLite.R")
+#source("https://bioconductor.org/biocLite.R")
 
 #Phenodata and load the celfile
 #data.path  <- file.path("/Users/Weitinglin/Documents/2016 實驗室資料處理/201510 microarray/raw data 20100114/set 8 CLS CLF Sphere")
@@ -255,10 +255,5 @@ searchHarmonizome <- function(genelist){
 }
 
 
-# browseDEresult ----------------------------------------------------------
-
-browseDEresult <- function(){
-    
-}
 
 
