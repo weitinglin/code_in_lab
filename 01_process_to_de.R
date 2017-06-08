@@ -5,7 +5,7 @@
 
 #library in the source R code
 
-source("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/analysis/microarry_function.R")
+source("/Users/Weitinglin/Documents/Repository/code_in_lab/00_microarry_function.R")
 
 
 
@@ -13,11 +13,18 @@ source("/Users/Weitinglin/Documents/R_scripts/Lab/microarray/analysis/microarry_
 
 
 #=====================input the data================================
-data.path  <- file.path("/Users/Weitinglin/Documents/2016 實驗室資料處理/201510 microarray/raw data 20100114/set 8 CLS CLF Sphere")
+data.path  <- file.path("/Volumes/2016weiting/lab_data/validationdataset/Raw_data/GSE19804/GSE19804_RAW")
+
 experiment.set <- c ( rep ("set8_withfibroblast" , 3 ) , rep ( "set8_withoutfibroblast" , 3 ), rep("set8_sphere", 3) )
 
-
-celfile.set <- do_phenodata(data.path = data.path, experiment.set = experiment.set)
+set<- list.files (data.path, pattern=".CEL.gz")
+phenodata.set   <- matrix ( rep ( set, 2) , ncol = 2 )
+phenodata.set   <- as.data.frame ( phenodata.set )
+colnames ( phenodata.set )   <- c ( "Name" , "FileName" )
+phenodata.set$experiment.set <- experiment.set
+write.table(phenodata.set, paste(data.path,"/phenodata_set.txt", sep = ""),quote=F,sep="\t",row.names=F)
+print("save the file! in to a phenodata_set.txt")
+celfile.set <- ReadAffy ( celfile.path = data.path , phenoData = paste(data.path,"/phenodata_set.txt", sep = "") )
 
 #=====================preprocess the data ======
 #use the mas5,in order not to log twice
@@ -957,6 +964,145 @@ ggplot(data = combine, aes(x = value)) +
 
 
 
-#for CLS-CLF
+
+# ==================== *******************************************************----------------------------------------------------
+
+# EX09 --------------------------------------------------------------------
+#=====================input the data================================
+data.path  <- file.path("/Users/Weitinglin/Documents/2016 實驗室資料處理/201510 microarray/raw data 20100114/set 9 CLS Sphere")
+experiment.set <- c ( rep ("set9_CLS_P0" , 3 ) , rep ( "set9_CLS_Sphere" , 3 ) )
+
+
+celfile.set <- do_phenodata(data.path = data.path, experiment.set = experiment.set)
+
+#=====================preprocess the data ======
+# use the mas5
+Set9.Exprs.data <- mas5 ( celfile.set , normalize = FALSE, analysis = "absolute", sc = 500)
+
+# save the temporary file
+save(Set9.Exprs.data, file="Set9_Exprs_data.RData")
+
+# expression profile
+ecelfile.set <- exprs ( Set9.Exprs.data )
+
+# quantile normalization
+norm <- quantile_normalization(ecelfile.set = ecelfile.set,  method="median")
+
+# t-test
+
+
+registerDoParallel(cores=8)
+#function
+
+t_test <- function(tmp, hypothesis = "two.sides", adj.method = "BH"){
+
+gene.list <- rownames(tmp)
+hypothesis <-  "two.sided"
+
+set.t.bamjamin.result  <- foreach(i = 1:nrow(tmp)) %dopar% {
+    t.test(tmp[i,1:3], tmp[i,4:6], alternative = hypothesis, paired = FALSE,  conf.level = 0.95) 
+}
+
+
+tmp.tidy.set.t.bamjamin.result <- foreach(i = 1:nrow(tmp)) %dopar% {
+    set.t.bamjamin.result[[i]] %>% broom::tidy() 
+}
+
+tidy.set.t.bamjamin.result <- foreach(i = 1:nrow(tmp)) %dopar% {
+    tmp.tidy.set.t.bamjamin.result[[i]] %>%  mutate(gene = gene.list[i])
+}
+
+set.t.bamjamin.final.result<- invoke(rbind, map(tidy.set.t.bamjamin.result, data.frame))
+set.t.bamjamin.final.result <- set.t.bamjamin.final.result %>% mutate(adjusted.p = p.adjust(p.value, method=adj.method),
+                                    adjusted.method = adj.method)
+return(set.t.bamjamin.final.result)
+}
+# EX10 --------------------------------------------------------------------
+
+data.path  <- file.path("/Users/Weitinglin/Documents/2016 實驗室資料處理/201510 microarray/raw data 20100114/set 10 CLS Sphere  TimeSeries")
+experiment.set <- c ( rep ("set10_CLS_P0" , 3 ) , rep ( "set10_CLS_Sphere" , 3 ) , rep ( "set10_CLS_Timeseies" , 3 ) )
+setwd(data.path)
+
+celfile.set <- do_phenodata(data.path = data.path, experiment.set = experiment.set)
+
+#=====================preprocess the data ======
+# use the mas5
+Set10.Exprs.data <- mas5 ( celfile.set , normalize = FALSE, analysis = "absolute", sc = 500)
+
+# save the temporary file
+setwd("/Users/Weitinglin/Documents/Repository/code_in_lab")
+save(Set10.Exprs.data, file="Set10_Exprs_data.RData")
+
+# expression profile
+ecelfile.set <- exprs ( Set10.Exprs.data )
+
+# quantile normalization
+norm <- quantile_normalization(ecelfile.set = ecelfile.set,  method="median")
+
+# t.test
+set10.t.result <- t_test(norm, adj.method = "BH", hypothesis = "two.sided")
+
+# GSEA analysis -----------------------------------------------------------
+load("~/Documents/Repository/code_in_lab/norm_qn_log.Rdata")
+norm.tmp         <- norm[,c(1,2,3,4,5,6)]
+norm.name        <- rownames(norm.tmp)
+norm.description <- rep("na", nrow(norm.tmp))
+
+norm.tmp <- as.data.frame(norm.tmp)
+norm.tmp$NAME <- norm.name
+norm.tmp$DESCRIPTION <- norm.description
+colnames(norm.tmp) <- c("Sphere.1","Sphere.2","Sphere.3", "Sphere.1","Sphere.2","Sphere.3", "Name", "Description")
+norm.tmp <- norm.tmp[,c(7,8,1:6)]
+write.table(norm.tmp, file="set10_SphereCLS_norm_qn.gct", quote = FALSE, row.names = FALSE, col.names = TRUE, sep="\t")
+
+# EX11 --------------------------------------------------------------------
+
+data.path  <- file.path("/Users/Weitinglin/Documents/2016 實驗室資料處理/201510 microarray/raw data 20100114/set 11 CAF Sphere")
+experiment.set <- c ( rep ("set11_Sphere" , 3 ) , rep ( "set11_CLF" , 3 ))
+setwd(data.path)
+
+celfile.set <- do_phenodata(data.path = data.path, experiment.set = experiment.set)
+
+#=====================preprocess the data ======
+# use the mas5
+Set11.Exprs.data <- mas5 ( celfile.set , normalize = FALSE, analysis = "absolute", sc = 500)
+
+# save the temporary file
+setwd("/Users/Weitinglin/Documents/Repository/code_in_lab")
+save(Set11.Exprs.data, file="Set11_Exprs_data.RData")
+
+# expression profile
+ecelfile.set <- exprs ( Set11.Exprs.data )
+
+# quantile normalization
+norm <- quantile_normalization(ecelfile.set = ecelfile.set,  method="median")
+
+# t.test
+set11.t.result <- t_test(norm, adj.method = "BH", hypothesis = "two.sided")
+
+
+
+
+save(set11.t.result, file="Set11_ttestBH.Rdata")
+
+
+
+
+
+
+# EX12 --------------------------------------------------------------------
+data.path  <- file.path("/Users/Weitinglin/Documents/2016 實驗室資料處理/201510 microarray/raw data 20100114/set 12 Sphere  Timeseries")
+experiment.set <- c ( rep ("set12_CLS_Sphere" , 3 ) , rep ( "set12_CLF" , 3 ))
+setwd(data.path)
+
+celfile.set <- do_phenodata(data.path = data.path, experiment.set = experiment.set)
+
+#=====================preprocess the data ======
+# use the mas5
+Set11.Exprs.data <- mas5 ( celfile.set , normalize = FALSE, analysis = "absolute", sc = 500)
+
+# save the temporary file
+setwd("/Users/Weitinglin/Documents/Repository/code_in_lab")
+save(Set11.Exprs.data, file="Set11_Exprs_data.RData")
 
 
