@@ -148,20 +148,6 @@ testing_wilcox_old <- function(eSet){
   return(wilcox.result)
 }
 
-#whether a probe is a TF or not
-# TF.BP.GO.path <- file.path("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/GO_BP_TF.txt")
-# TF.CC.GO.path <- file.path("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/GO_CC_TF.txt")
-# TF.MF.GO.path <- file.path("/Users/Weitinglin/Documents/R_scripts/Lab/microarray20161111/GO_MF_TF.txt")
-# 
-# TF.BP.GO <- read_delim(TF.BP.GO.path, col_names = c("GO_identifier", "description"),delim = "\t")
-# TF.CC.GO <- read_delim(TF.CC.GO.path, col_names =c("GO_identifier", "description"), delim = "\t")
-# TF.MF.GO <- read_delim(TF.MF.GO.path, col_names = c("GO_identifier", "description"), delim = "\t")
-# 
-# TF.BP.GO.id <- TF.BP.GO$GO_identifier 
-# TF.CC.GO.id <- TF.CC.GO$GO_identifier 
-# TF.MF.GO.id <- TF.MF.GO$GO_identifier
-
-
 getprobeRelateToGoTF <- function(probelist){
 probe.relatedTF <- data.frame()
 for (i in 1:length(probelist)){
